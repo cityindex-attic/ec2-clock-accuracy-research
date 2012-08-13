@@ -3,7 +3,9 @@
 Ubuntu 12.04:
 
 1.  Clone this repo
-1.  ```sudo gem install chef rake knife-ec2 librarian --no-ri --no-rdoc```
+1.  Ensure Ruby 1.9.3+ is installed, eg:  ```sudo apt-get install ruby1.9.3```
+1.  Might also need to uninstall ruby 1.8?
+1.  ```sudo gem install chef rake knife-ec2 knife-windows librarian --no-ri --no-rdoc```
 1.  Run ```librarian-chef install``` 
 	eg: ``` ~/Projects/ec2-clock-accuracy-research/infrastructure$ librarian-chef install```
     This will create a cookbooks & tmp folder, and download all the cookbooks referenced in the Cheffile
@@ -16,12 +18,19 @@ Ubuntu 12.04:
     
 #### Note on Windows nodes
 
-1.  WinRM must be enabled for knife-windows commands to work.  From an Admin command prompt
+1.  WinRM must be enabled for knife-windows commands to work. Add the following to the EC2 instance userdata when launching (must use Amazon Windows AMI > April 2012)
 
-           winrm quickconfig -q
-           winrm set winrm/config/winrs @{MaxMemoryPerShellMB="300"}
-           winrm set winrm/config @{MaxTimeoutms="1800000"}
-           winrm set winrm/config/service @{AllowUnencrypted="true"}
-           winrm set winrm/config/service/auth @{Basic="true"}
+            <script>
+			net user bootstrapper BootMeBaby123 /add
+			net localgroup administrators bootstrapper /add
+			winrm quickconfig -q
+			winrm set winrm/config/winrs @{MaxMemoryPerShellMB="300"}
+			winrm set winrm/config @{MaxTimeoutms="1800000"}
+			winrm set winrm/config/service @{AllowUnencrypted="true"}
+			winrm set winrm/config/service/auth @{Basic="true"}
+			</script>
 
- 1.  TODO - how can we secure winrm traffic?
+
+1.  Then chef can be bootstrapped using:
+
+       knife bootstrap windows winrm {ec2-46-51-149-124.eu-west-1.compute.amazonaws.com} -x bootstrapper -P 'BootMeBaby123'
