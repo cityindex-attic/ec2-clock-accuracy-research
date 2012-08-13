@@ -9,3 +9,8 @@ validation_key           "#{current_dir}/validator.pem"
 chef_server_url          "https://api.opscode.com/organizations/{your_org}"
 cookbook_path            ["#{current_dir}/../cookbooks"]
 encrypted_data_bag_secret "#{current_dir}/data_bag_key"
+
+knife[:region] 			 	  =	"eu-west-1"
+knife[:aws_ssh_key_id] 	 	  =	"{your_key_name}"
+knife[:aws_access_key_id] = "#{ENV['AWS_ACCESS_KEY_ID']}"
+knife[:aws_secret_access_key] = "#{ENV['AWS_SECRET_ACCESS_KEY']}"
