@@ -39,8 +39,8 @@ template_body = None
 template_url = None
 # Is this a HTTP(S) template?
 if not args.template.startswith('http'):
-    f = open(args.template, 'r')
-    template_body = f.read()
+    template_file = open(args.template, 'r')
+    template_body = template_file.read()
 
 parameters = dict([parameter.split('=') for parameter in args.parameter])
 notification_arns = []
