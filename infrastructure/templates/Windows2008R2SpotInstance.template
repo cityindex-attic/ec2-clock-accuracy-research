@@ -1,0 +1,114 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "AWS CloudFormation Template: Create an Amazon EC2 instance running Amazon EBS-Backed Windows Server 2008 R2 English 64-bit - Base for CloudFormation (https://aws.amazon.com/amis/microsoft-windows-server-2008-r2-base-cloudformation). You will be billed for the AWS resources used if you create a stack from this template.",
+
+  "Parameters" : {
+    "KeyName" : {
+      "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the instance",
+      "Type" : "String"
+    },
+    "NotificationTopic" : {
+      "Description" : "SNS topic ARN to notify of Auto Scaling events.",
+      "Type" : "String"
+    },
+    "InstanceType" : {
+      "Description" : "EC2 instance type to provision.",
+      "Type" : "String",
+      "Default" : "m1.small",
+      "AllowedValues" : [ "t1.micro","m1.small","m1.medium","m1.large","m1.xlarge","m2.xlarge","m2.2xlarge","m2.4xlarge","c1.medium","c1.xlarge"],
+      "ConstraintDescription" : "must be a valid EC2 instance type."
+    },
+    "InstanceCountMin" : {
+      "Description" : "Minimum instance count.",
+      "Default" : "1",
+      "Type" : "Number"
+    },
+    "InstanceCountMax" : {
+      "Description" : "Maximum instance count.",
+      "Default" : "2",
+      "Type" : "Number"
+    },
+    "InstanceCountDes" : {
+      "Description" : "Desired instance count.",
+      "Default" : "1",
+      "Type" : "Number"
+    },
+    "SpotPrice" : {
+      "Description" : "Maximum spot price to bid in USD (e.g.: 0.32).",
+      "Default" : "0.1",
+      "Type" : "Number"
+    }
+  },
+
+  "Mappings" : {
+    "RegionMap" : {
+      "us-east-1"      : { "AMI" : "ami-9b40eef2" },
+      "us-west-1"      : { "AMI" : "ami-59fbde1c" },
+      "us-west-2"      : { "AMI" : "ami-bab9368a" },
+      "sa-east-1"      : { "AMI" : "ami-8e538d93" },
+      "eu-west-1"      : { "AMI" : "ami-d99793ad" },
+      "ap-northeast-1" : { "AMI" : "ami-d666d4d7" },
+      "ap-southeast-1" : { "AMI" : "ami-825011d0" }
+    }
+  },
+
+  "Resources" : {
+  "InstanceSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Global - RDP (3389), SSH(22) & chef-server only - WINRM (5985,5986)",
+        "SecurityGroupIngress" : [ 
+        {
+          "IpProtocol" : "tcp",
+          "FromPort" : "22",
+          "ToPort" : "22",
+          "CidrIp" : "0.0.0.0/0"
+        },
+        {
+          "IpProtocol" : "tcp",
+          "FromPort" : "3389",
+          "ToPort" : "3389",
+          "CidrIp" : "0.0.0.0/0"
+        },
+        {
+          "IpProtocol" : "tcp",
+          "FromPort" : "5985",
+          "ToPort" : "5986",
+          "CidrIp" : "23.21.125.10/32"
+        } ]
+      }
+    },
+
+    "InstanceGroup": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+          "AvailabilityZones": { "Fn::GetAZs" : "" },
+          "LaunchConfigurationName": { "Ref": "LaunchConfig" },
+      		"NotificationConfiguration" : {
+      		  "TopicARN" : { "Ref" : "NotificationTopic" },
+      		  "NotificationTypes" : [ 
+              "autoscaling:EC2_INSTANCE_LAUNCH",
+              "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+              "autoscaling:EC2_INSTANCE_TERMINATE", 
+              "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"
+            ]
+      		},
+      		"Tags": [ { "Key": "Name", "Value": "test-latency-collector", "PropagateAtLaunch" : "true"  } ],
+          "MinSize": { "Ref": "InstanceCountMin" },
+          "MaxSize": { "Ref": "InstanceCountMax" }
+      }
+    },
+    "LaunchConfig": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+          "SpotPrice" : { "Ref" : "SpotPrice" },
+          "ImageId": { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
+          "SecurityGroups": [ { "Ref": "InstanceSecurityGroup" } ],
+          "InstanceType": { "Ref": "InstanceType" },
+          "UserData" : { "Fn::Base64" : "80" },
+          "KeyName": {  "Ref": "KeyName"  }
+      }
+    }
+  }
+}
