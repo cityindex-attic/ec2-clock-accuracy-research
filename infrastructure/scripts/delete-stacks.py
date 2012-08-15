@@ -35,7 +35,7 @@ for region in regions:
         cfn = boto.connect_cloudformation(region=region, **credentials)
         stacks = cfn.describe_stacks(args.stack_name_or_id)
         for stack in stacks:
-            print 'Deleting stack ' + stack.stack_name
+            print 'Deleting stack ' + args.stack_name_or_id
             cfn.delete_stack(args.stack_name_or_id)
     except boto.exception.BotoServerError, e:
         print e.error_message
