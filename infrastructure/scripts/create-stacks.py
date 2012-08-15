@@ -12,8 +12,8 @@ boto.cloudformation.connect_to_region = patch9d3c9f0.connect_to_region
 parser = argparse.ArgumentParser(description='Create a CloudFormation stack in all/some available CloudFormation regions')
 parser.add_argument("stack_name", help="A stack name")
 parser.add_argument("template", help="A stack template local file or URL (URL not supported yet!)")
-parser.add_argument("-p", "--parameter", action="append", help="A (key,value) pair for a template input parameter. [can be used multiple times]")
-parser.add_argument("-n", "--notification_arn", action="append", help="A SNS topic to send Stack event notifications to. [can be used multiple times]")
+parser.add_argument("-p", "--parameter", action="append", help="A (key,value) pair for a template input parameter. Substitutions for {REGION} and {ACCOUNT} are available to e.g. support ARN construction. [can be used multiple times]")
+parser.add_argument("-n", "--notification_arn", action="append", help="A SNS topic to send Stack event notifications to. Substitutions for {REGION} and {ACCOUNT} are available to e.g. support ARN construction. [can be used multiple times]")
 parser.add_argument("-d", "--disable_rollback", action="store_true", help="Indicates whether or not to rollback on failure. [default: false]")
 parser.add_argument("-t", "--timeout", type=int, help="Maximum amount of time to let the Stack spend creating itself. If this timeout is exceeded, the Stack will enter the CREATE_FAILED state.")
 parser.add_argument("-i", "--enable_iam", action="store_true", help="Enable 'CAPABILITY_IAM'. [default: false]")
@@ -28,12 +28,25 @@ credentials = {'aws_access_key_id': args.aws_access_key_id, 'aws_secret_access_k
 def isSelected(region):
     return True if region.name.find(args.region) != -1 else False
 
-# execute business logic
+def processParameter(parameter, region_name, account_id):
+    replacement = parameter[1].replace('{REGION}', region_name).replace('{ACCOUNT}', account_id)
+    processedParameter = tuple([parameter[0], replacement])
+    return processedParameter
+
+def processArn(arn, region_name, account_id):
+    return arn.replace('{REGION}', region_name).replace('{ACCOUNT}', account_id)
+
+# execute business logic    
 heading = "Creating CloudFormation stacks named '" + args.stack_name + "'"
 regions = boto.cloudformation.regions()
 if args.region:
     heading += " (filtered by region '" + args.region + "')"
     regions = filter(isSelected, regions)
+
+from boto_cli.iam.accountinfo import AccountInfo
+iam = boto.connect_iam(**credentials)
+accountInfo = AccountInfo(iam)
+account = accountInfo.describe()
 
 template_body = None
 template_url = None
@@ -57,7 +70,9 @@ for region in regions:
     try:
         cfn = boto.connect_cloudformation(region=region, **credentials)
         print 'Creating stack ' + args.stack_name
-        cfn.create_stack(args.stack_name, template_body=template_body, template_url=template_url, parameters=tuple(parameters.items()), notification_arns=notification_arns,
-                         disable_rollback=args.disable_rollback, timeout_in_minutes=args.timeout, capabilities=capabilities)
+        processedParameters = dict([processParameter(item, region.name, account.id) for item in parameters.items()])
+        processedArns = [processArn(item, region.name, account.id) for item in notification_arns]
+        cfn.create_stack(args.stack_name, template_body=template_body, template_url=template_url, parameters=tuple(processedParameters.items()),
+                         notification_arns=processedArns, disable_rollback=args.disable_rollback, timeout_in_minutes=args.timeout, capabilities=capabilities)
     except boto.exception.BotoServerError, e:
         print e.error_message

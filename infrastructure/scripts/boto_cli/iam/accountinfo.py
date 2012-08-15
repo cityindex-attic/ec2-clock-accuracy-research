@@ -15,13 +15,22 @@ class AccountInfo:
 
     def describe(self, user=None):
         self.account = {}
-        alias = self.connection.get_account_alias()
-        self.alias = alias['list_account_aliases_response']['list_account_aliases_result']['account_aliases'][0]
-        if not self.user:
-            from userinfo import UserInfo
-            userInfo = UserInfo(self.connection)
-            self.user = userInfo.describe()
-        self.id = self.user.arn.replace('arn:aws:iam::', '').partition(':')[0]
+        try:
+            alias = self.connection.get_account_alias()
+            self.alias = alias['list_account_aliases_response']['list_account_aliases_result']['account_aliases'][0]
+        except boto.exception.BotoServerError, e:
+            print e.error_message
+        try:
+            # TODO: there should be a better way to retrieve the account id, which is 'leaked in the exception anyway
+            # eventually; see http://stackoverflow.com/questions/10197784 for a respective question.
+            if not self.user:
+                from userinfo import UserInfo
+                userInfo = UserInfo(self.connection)
+                self.user = userInfo.describe()
+            self.id = self.user.arn.replace('arn:aws:iam::', '').partition(':')[0]
+        except boto.exception.BotoServerError, e:
+            self.id = e.error_message.replace('User: arn:aws:iam::', '').partition(':')[0]
+            print e.error_message
         return self
 
 # Sample exercise of class functionality (requires AWS credentials to be provided externally) 
