@@ -7,7 +7,7 @@ from pprint import pprint
 # configure command line argument parsing
 parser = argparse.ArgumentParser(description='Imports a key pair in all/some available EC2 regions')
 parser.add_argument("key_name", help="A key pair name")
-parser.add_argument("public_key", help="The key pair's public key")
+parser.add_argument("public_key", help="The key pair's public key file (e.g. ~/.ssh/my-key.pub )")
 parser.add_argument("-r", "--region", help="A region substring selector (e.g. 'us-west')")
 parser.add_argument("--access_key_id", dest='aws_access_key_id', help="Your AWS Access Key ID")
 parser.add_argument("--secret_access_key", dest='aws_secret_access_key', help="Your AWS Secret Access Key")
