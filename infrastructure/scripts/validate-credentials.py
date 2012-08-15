@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import argparse
 import boto
 from boto_cli.iam.accountinfo import AccountInfo
