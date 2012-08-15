@@ -1,0 +1,96 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "AWS CloudFormation Template: Create an Amazon EC2 instance running the Ubuntu 12.04 AMI. The AMI is chosen based on the region in which the stack is run. **WARNING** This template creates AWS resources. You will be billed for the AWS resources used if you create a stack from this template.",
+
+  "Parameters" : {
+    "KeyName" : {
+      "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the instance",
+      "Type" : "String"
+    },
+    "NotificationTopic" : {
+      "Description" : "SNS topic ARN to notify of Auto Scaling events.",
+      "Type" : "String"
+    },
+    "InstanceType" : {
+      "Description" : "EC2 instance type to provision.",
+      "Type" : "String",
+      "Default" : "t1.micro",
+      "AllowedValues" : [ "t1.micro","m1.small","m1.medium","m1.large","m1.xlarge","m2.xlarge","m2.2xlarge","m2.4xlarge","c1.medium","c1.xlarge"],
+      "ConstraintDescription" : "must be a valid EC2 instance type."
+    },
+    "InstanceCountMin" : {
+      "Description" : "Minimum instance count.",
+      "Default" : "1",
+      "Type" : "Number"
+    },
+    "InstanceCountMax" : {
+      "Description" : "Maximum instance count.",
+      "Default" : "2",
+      "Type" : "Number"
+    },
+    "InstanceCountDes" : {
+      "Description" : "Desired instance count.",
+      "Default" : "1",
+      "Type" : "Number"
+    },
+    "SpotPrice" : {
+      "Description" : "Maximum spot price to bid in USD (e.g.: 0.32).",
+      "Default" : "0.01",
+      "Type" : "Number"
+    }
+  },
+
+  "Mappings" : {
+    "RegionMap" : {
+      "us-east-1"      : { "AMI" : "ami-82fa58eb" },
+      "us-west-1"      : { "AMI" : "ami-5965401c" },
+      "us-west-2"      : { "AMI" : "ami-4438b474" },
+      "sa-east-1"      : { "AMI" : "ami-5c03dd41" },
+      "eu-west-1"      : { "AMI" : "ami-ab9491df" },
+      "ap-northeast-1" : { "AMI" : "ami-c641f2c7" },
+      "ap-southeast-1" : { "AMI" : "ami-acf6b0fe" }
+    }
+  },
+
+  "Resources" : {
+  "InstanceSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable SSH access via port 22",
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "22",
+          "ToPort" : "22",
+          "CidrIp" : "0.0.0.0/0"
+        } ]
+      }
+    },
+
+    "InstanceGroup": {
+            "Type": "AWS::AutoScaling::AutoScalingGroup",
+            "Properties": {
+                "AvailabilityZones": { "Fn::GetAZs" : "" },
+                "LaunchConfigurationName": { "Ref": "LaunchConfig" },
+		"NotificationConfiguration" : {
+		  "TopicARN" : { "Ref" : "NotificationTopic" },
+		  "NotificationTypes" : [ "autoscaling:EC2_INSTANCE_LAUNCH","autoscaling:EC2_INSTANCE_LAUNCH_ERROR","autoscaling:EC2_INSTANCE_TERMINATE", "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"]
+		},
+		"Tags": [ { "Key": "Name", "Value": "test-latency-collector", "PropagateAtLaunch" : "true"  } ],
+                "MinSize": { "Ref": "InstanceCountMin" },
+                "MaxSize": { "Ref": "InstanceCountMax" }
+            }
+        },
+	"LaunchConfig": {
+            "Type": "AWS::AutoScaling::LaunchConfiguration",
+            "Properties": {
+                "SpotPrice" : { "Ref" : "SpotPrice" },
+                "ImageId": { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
+                "SecurityGroups": [ { "Ref": "InstanceSecurityGroup" } ],
+                "InstanceType": { "Ref": "InstanceType" },
+		"UserData" : { "Fn::Base64" : "80" },
+		"KeyName": {  "Ref": "KeyName"  }
+            }
+        }
+  }
+}
