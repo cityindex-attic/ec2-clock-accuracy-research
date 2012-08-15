@@ -56,7 +56,10 @@ if not args.template.startswith('http'):
     template_file = open(args.template, 'r')
     template_body = template_file.read()
 
-parameters = dict([parameter.split('=') for parameter in args.parameter])
+parameters = dict([])
+if args.parameter:
+    parameters = dict([parameter.split('=') for parameter in args.parameter])
+
 notification_arns = []
 if args.notification_arn:
     notification_arns = args.notification_arn
