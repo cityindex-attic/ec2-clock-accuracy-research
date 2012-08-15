@@ -18,25 +18,12 @@ credentials = {'aws_access_key_id': args.aws_access_key_id, 'aws_secret_access_k
 def isSelected(region):
     return True if region.name.find(args.region) != -1 else False
 
-def describeUser():
-    import boto.iam
-    iam = boto.connect_iam()
-    user = iam.get_user()
-    return user['get_user_response']['get_user_result']['user']
-
-def describeAccount(user=None):
-    import boto.iam
-    iam = boto.connect_iam()
-    account = {}
-    alias = iam.get_account_alias()
-    account['Alias'] = alias['list_account_aliases_response']['list_account_aliases_result']['account_aliases'][0]
-    if not user:
-        user = describeUser()
-    account['Id'] = user['arn'].replace('arn:aws:iam::', '').partition(':')[0]
-    return account
-
-def createTopicArn(region_name, account_id, topic_name):
-    return 'arn:aws:sns:' + region_name + ':' + account_id + ':' + topic_name
+def createTopicArn(region_name, topic_name):
+    from boto_cli.iam.accountinfo import AccountInfo
+    iam = boto.connect_iam(**credentials)
+    accountInfo = AccountInfo(iam)
+    account = accountInfo.describe()
+    return 'arn:aws:sns:' + region_name + ':' + account.id + ':' + topic_name
 
 # execute business logic
 heading = "Subscribing to SNS topics named '" + args.topic + "'"
@@ -45,15 +32,12 @@ if args.region:
     heading += " (filtered by region '" + args.region + "')"
     regions = filter(isSelected, regions)
 
-user = describeUser()
-account = describeAccount(user)
-
 print heading + ":"
 for region in regions:
     pprint(region.name, indent=2)
     try:
         sns = boto.connect_sns(region=region, **credentials)
-        arn = createTopicArn(region.name, account['Id'], args.topic)
+        arn = createTopicArn(region.name, args.topic)
         print 'Subscribing to topic ' + arn + ' with protocol ' + args.protocol + ' and endpoint ' + args.endpoint
         sns.subscribe(arn, args.protocol, args.endpoint)
     except boto.exception.BotoServerError, e:

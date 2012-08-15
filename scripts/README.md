@@ -20,3 +20,5 @@ AWS credentials are obviously required, which can provided via the command line 
 but are more easily served via environment variables or a configuration file for day to day usage, 
 see section [Getting Started with Boto](https://github.com/boto/boto#getting-started-with-boto) for details.
 
+* The `validate-credentials` script provides a convenience method to both validate the AWS credentails and 
+display respective account/user information, which helps when juggling multiple AWS accounts.
