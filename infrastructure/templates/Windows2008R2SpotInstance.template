@@ -111,10 +111,21 @@
               "Fn::Join": [
                 "\n",
                 [
-                  "<script>",
+                  "<powershell>",
+                  "#rem Create a default user",
                   "net user bootstrapper BootMeBaby123 /add",
                   "net localgroup administrators bootstrapper /add",
-                  "</script>"
+                  "#rem Enable WinRM",
+                  "winrm quickconfig -q",
+                  "winrm set winrm/config/winrs @{MaxMemoryPerShellMB='300'}",
+                  "winrm set winrm/config @{MaxTimeoutms='1800000'}",
+                  "winrm set winrm/config/service @{AllowUnencrypted='true'}",
+                  "winrm set winrm/config/service/auth @{Basic='true'}",
+                  "#rem Install Chef using chef-client MSI installer",
+                  "mkdir c:/tmp",
+                  "(New-Object System.Net.WebClient).DownloadFile('http://www.opscode.com/chef/install.msi', 'c:/tmp/chef-client-latest.msi')",
+                  "msiexec /qb /i c:\\tmp\\chef-client-latest.msi",
+                  "</powershell>"
                 ]
               ] 
             }
