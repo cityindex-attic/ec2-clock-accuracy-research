@@ -12,6 +12,15 @@
       "Description" : "SNS topic ARN to notify of Auto Scaling events.",
       "Type" : "String"
     },
+    "ChefConfigBucketName" : {
+       "Description" : "S3 bucket containing Chef config files (validation.pem, encrypted_data_bag_secret, client.rb, first-boot.json",
+       "Type" : "String"
+    },
+    "ChefEnvironment" : {
+       "Description" : "Chef environment",
+       "Type" : "String",
+       "Default" : "_default"
+    },
     "InstanceType" : {
       "Description" : "EC2 instance type to provision.",
       "Type" : "String",
@@ -54,7 +63,27 @@
   },
 
   "Resources" : {
-  "InstanceSecurityGroup" : {
+    "CfnUser" : {
+      "Type" : "AWS::IAM::User",
+      "Properties" : {
+        "Path": "/",
+        "Policies": [{
+          "PolicyName": "root",
+          "PolicyDocument": { "Statement":[{
+            "Effect":"Allow",
+            "Action":"cloudformation:DescribeStackResource",
+            "Resource":"*"
+          }]}
+        }]
+      }
+    },
+    "CfnKeys" : {
+        "Type" : "AWS::IAM::AccessKey",
+        "Properties" : {
+            "UserName" : {"Ref": "CfnUser"}
+        }
+    },
+    "InstanceSecurityGroup" : {
       "Type" : "AWS::EC2::SecurityGroup",
       "Properties" : {
         "GroupDescription" : "Global - RDP (3389), SSH(22) & chef-server only - WINRM (5985,5986)",
@@ -79,7 +108,6 @@
         } ]
       }
     },
-
     "InstanceGroup": {
       "Type": "AWS::AutoScaling::AutoScalingGroup",
       "Properties": {
@@ -106,31 +134,62 @@
           "ImageId": { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
           "SecurityGroups": [ { "Ref": "InstanceSecurityGroup" } ],
           "InstanceType": { "Ref": "InstanceType" },
-          "UserData" : { 
-            "Fn::Base64": {
-              "Fn::Join": [
-                "\n",
-                [
-                  "<powershell>",
-                  "#rem Create a default user",
-                  "net user bootstrapper BootMeBaby123 /add",
-                  "net localgroup administrators bootstrapper /add",
-                  "#rem Enable WinRM",
-                  "winrm quickconfig -q",
-                  "winrm set winrm/config/winrs @{MaxMemoryPerShellMB='300'}",
-                  "winrm set winrm/config @{MaxTimeoutms='1800000'}",
-                  "winrm set winrm/config/service @{AllowUnencrypted='true'}",
-                  "winrm set winrm/config/service/auth @{Basic='true'}",
-                  "#rem Install Chef using chef-client MSI installer",
-                  "mkdir c:/tmp",
-                  "(New-Object System.Net.WebClient).DownloadFile('http://www.opscode.com/chef/install.msi', 'c:/tmp/chef-client-latest.msi')",
-                  "msiexec /qb /i c:\\tmp\\chef-client-latest.msi",
-                  "</powershell>"
-                ]
-              ] 
+          "KeyName": {  "Ref": "KeyName"  },
+          "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+              "<powershell>\n",
+              "#rem Create a default user\n",
+              "net user bootstrapper BootMeBaby123 /add\n",
+              "net localgroup administrators bootstrapper /add\n",
+              "#rem Enable WinRM\n",
+              "winrm quickconfig -q\n",
+              "winrm set winrm/config/winrs @{MaxMemoryPerShellMB='300'}\n",
+              "winrm set winrm/config @{MaxTimeoutms='1800000'}\n",
+              "winrm set winrm/config/service @{AllowUnencrypted='true'}\n",
+              "winrm set winrm/config/service/auth @{Basic='true'}\n",
+              "#rem Fetch config files from S3 and Chef msi from Opscode\n",
+              "mkdir /etc/chef\n",
+              "cfn-init -s ", { "Ref" : "AWS::StackName" }, " -r LaunchConfig ",
+                  "    --access-key ",  { "Ref" : "CfnKeys" },
+                  "    --secret-key ", {"Fn::GetAtt": ["CfnKeys", "SecretAccessKey"]},
+                  "    --region ", { "Ref" : "AWS::Region" }, "\n",
+              "#rem Install Chef using chef-client MSI installer",
+              "msiexec /qb /i c:\\etc\\chef\\chef-client-latest.msi",
+              "$env:Path += \";;C:\\ruby\\bin;C:\\opscode\\chef\\bin;C:\\opscode\\chef\\embedded\\bin\"\n",
+              "chef-client -c /etc/chef/client.rb -j /etc/chef/first-boot.json ",
+                          " --environment ", { "Ref" : "ChefEnvironment" }, "\n",
+              "</powershell>"
+            ]]}}
+      },
+      "Metadata" : {
+        "AWS::CloudFormation::Init" : { 
+            "config" : {
+                "files" : {
+                    "/etc/chef/chef-client-latest.msi" : {
+                        "source": "http://www.opscode.com/chef/install.msi"
+                    },
+                    "/etc/chef/validation.pem" : {
+                        "source": { "Fn::Join" : ["", [ "https://s3.amazonaws.com/", { "Ref" : "ChefConfigBucketName" }, "/validation.pem" ]]}
+                    },
+                    "/etc/chef/encrypted_data_bag_secret" : {
+                        "source": { "Fn::Join" : ["", [ "https://s3.amazonaws.com/", { "Ref" : "ChefConfigBucketName" }, "/encrypted_data_bag_secret" ]]}
+                    },
+                    "/etc/chef/client.rb" : {
+                        "source": { "Fn::Join" : ["", [ "https://s3.amazonaws.com/", { "Ref" : "ChefConfigBucketName" }, "/client.rb" ]]}
+                    },
+                    "/etc/chef/first-boot.json" : {
+                        "source": { "Fn::Join" : ["", [ "https://s3.amazonaws.com/", { "Ref" : "ChefConfigBucketName" }, "/first-boot.json" ]]}
+                    }
+                }
             }
-          },
-          "KeyName": {  "Ref": "KeyName"  }
+        },
+        "AWS::CloudFormation::Authentication" : {
+            "S3AccessCreds" : {
+                "type" : "S3",
+                "accessKeyId" : { "Ref" : "CfnKeys" },
+                "secretKey" : {"Fn::GetAtt": ["CfnKeys", "SecretAccessKey"]},
+                "buckets" : [ { "Ref" : "ChefConfigBucketName" } ]
+            }
+        }
       }
     }
   }
