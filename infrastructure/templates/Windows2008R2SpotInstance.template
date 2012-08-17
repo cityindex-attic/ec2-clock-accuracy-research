@@ -71,7 +71,11 @@
           "PolicyName": "root",
           "PolicyDocument": { "Statement":[{
             "Effect":"Allow",
-            "Action":"cloudformation:DescribeStackResource",
+            "Action":[
+              "cloudformation:DescribeStackResource",
+              "s3:Get*",
+              "s3:List*"
+            ],
             "Resource":"*"
           }]}
         }]
