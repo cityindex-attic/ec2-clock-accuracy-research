@@ -7,4 +7,13 @@ task :integration_test do
 	puts "TODO: Check it all worked..."
 end
 
+desc "Launch new Windows EC2 instances to run integration tests"
+task :integration_test_windows do
+	stack_name = "Windows2008R2SpotInstance-test-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
+	puts "Starting Windows cloud stack in eu-west-1 region named #{stack_name}"
+	`./scripts/create-stacks.py #{stack_name} ./templates/Windows2008R2SpotInstance.template -p KeyName=labs-commander -p NotificationTopic=arn:aws:sns:{REGION}:{ACCOUNT}:as-labs-cityindex-com -p ChefConfigBucketName=cityindex.labs.chef_bootstrap -r eu-west --enable_iam`
+	puts "TODO: Converge..."
+	puts "TODO: Check it all worked..."
+end
+
 task :default => 'integration_test'
