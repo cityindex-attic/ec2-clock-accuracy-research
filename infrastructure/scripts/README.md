@@ -10,7 +10,7 @@ Python with boto or PowerShell with the AWS SDK for .NET for its AWS automation 
 
 The scripts are based on [Python 2.7](http://python.org/) and have the following dependencies:
 
-* [boto](https://github.com/boto/boto), which provides the interface to Amazon Web Services
+* A recent version of [boto](https://github.com/boto/boto) (tested agains 2.5.2), which provides the interface to Amazon Web Services
 
 ## Usage
 

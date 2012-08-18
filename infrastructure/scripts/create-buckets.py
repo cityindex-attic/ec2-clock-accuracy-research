@@ -3,6 +3,7 @@ import argparse
 import boto
 import boto.s3
 from boto.s3.connection import Location
+from boto_cli import configure_logging
 from boto_cli.s3 import class_iterator
 from boto_cli.s3 import RegionMap
 import logging
@@ -20,12 +21,7 @@ parser.add_argument("-l", "--log", dest='log_level', default='WARNING',
                     help="The logging level to use. [default: WARNING]")
 args = parser.parse_args()
 
-# configure logging
-log.setLevel(getattr(logging, args.log_level.upper()))
-# define a Handler which writes INFO messages or higher to the sys.stderr
-console_handler = logging.StreamHandler()
-console_handler.setLevel(log.getEffectiveLevel())
-log.addHandler(console_handler)
+configure_logging(log, args.log_level)
 
 def isSelected(region):
     return True if RegionMap[region].find(args.region) != -1 else False
