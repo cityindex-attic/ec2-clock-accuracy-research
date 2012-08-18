@@ -12,6 +12,15 @@
       "Description" : "SNS topic ARN to notify of Auto Scaling events.",
       "Type" : "String"
     },
+    "ChefConfigBucketName" : {
+       "Description" : "S3 bucket containing Chef config files (validation.pem, encrypted_data_bag_secret, client.rb, first-boot.json",
+       "Type" : "String"
+    },
+    "ChefEnvironment" : {
+       "Description" : "Chef environment",
+       "Type" : "String",
+       "Default" : "_default"
+    },
     "InstanceType" : {
       "Description" : "EC2 instance type to provision.",
       "Type" : "String",
