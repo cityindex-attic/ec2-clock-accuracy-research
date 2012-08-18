@@ -139,71 +139,66 @@
     },
     "LaunchConfig": {
       "Type": "AWS::AutoScaling::LaunchConfiguration",
-      "Properties": {
-          "SpotPrice" : { "Ref" : "SpotPrice" },
-          "ImageId": { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
-          "SecurityGroups": [ { "Ref": "InstanceSecurityGroup" } ],
-          "InstanceType": { "Ref": "InstanceType" },
-          "KeyName": {  "Ref": "KeyName"  },
-          "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
-              "<powershell>\n",
-              "mkdir /etc/chef 2>&1 >> /cfn-bootstrap.log\n",
-              "cfn-init -s ", { "Ref" : "AWS::StackName" }, " -r LaunchConfig ",
-                  "    --access-key ",  { "Ref" : "CfnKeys" },
-                  "    --secret-key ", {"Fn::GetAtt": ["CfnKeys", "SecretAccessKey"]},
-                  "    --region ", { "Ref" : "AWS::Region" }, " 2>&1 >> /cfn-bootstrap.log\n",
-              "cmd.exe /c \"/etc/chef/add_bootstrap_user.cmd\" 2>&1 >> /cfn-bootstrap.log\n",
-              "cmd.exe /c \"/etc/chef/enable_winrm.cmd\" 2>&1 >> /cfn-bootstrap.log\n",
-              "#rem Install Chef using chef-client MSI installer\n",
-              "Start-Process -FilePath msiexec -ArgumentList /i, c:\\etc\\chef\\chef-client-latest.msi,",
-                              " /qn, /lv,c:\\chef-client-latest.msi.log -Wait\n",
-              "$env:Path += \";;C:/opscode/chef/bin;C:/opscode/chef/embedded/bin\" 2>&1 >> /cfn-bootstrap.log\n",
-              "chef-client -c /etc/chef/client.rb -j /etc/chef/first-boot.json ",
-                          " --environment ", { "Ref" : "ChefEnvironment" }, 
-                          " --logfile /chef-bootstrap.log ",
-                          " 2>&1 >> /cfn-bootstrap.log\n",
-              "cfn-signal --data \"Chef bootstrapped successfully\" '", { "Ref" : "ChefBootstrapWaitHandle" }, "'\n",
-              "echo \"Done!\" 2>&1 >> /cfn-bootstrap.log\n",          
-              "</powershell>"
-            ]]}}
-      },
       "Metadata" : {
         "AWS::CloudFormation::Init" : { 
             "config" : {
-                "files" : {
-                    "/etc/chef/add_bootstrap_user.cmd" : {
-                      "content" : { "Fn::Join" : ["", [
-                          "net user bootstrapper BootMeBaby123 /add\n",
-                          "net localgroup administrators bootstrapper /add\n",
-                          "cfn-signal --data \"User bootstrapper created successfully\" '", { "Ref" : "ChefBootstrapWaitHandle" }, "'\n"
-                        ]]}
-                    },
-                    "/etc/chef/enable_winrm.cmd" : {
-                      "content" : { "Fn::Join" : ["", [
-                          "winrm quickconfig -q\n",
-                          "winrm set winrm/config/winrs @{MaxMemoryPerShellMB=\"300\"}\n",
-                          "winrm set winrm/config @{MaxTimeoutms=\"1800000\"}\n",
-                          "winrm set winrm/config/service @{AllowUnencrypted=\"true\"}\n",
-                          "winrm set winrm/config/service/auth @{Basic=\"true\"}\n",
-                           "cfn-signal --data \"WinRM enabled successfully\" '", { "Ref" : "ChefBootstrapWaitHandle" }, "'\n"
-                        ]]}
-                    },
-                    "/etc/chef/chef-client-latest.msi" : {
-                        "source": "http://www.opscode.com/chef/install.msi"
-                    },
-                    "/etc/chef/validation.pem" : {
-                        "source": { "Fn::Join" : ["", [ "https://s3.amazonaws.com/", { "Ref" : "ChefConfigBucketName" }, "/validation.pem" ]]}
-                    },
-                    "/etc/chef/encrypted_data_bag_secret" : {
-                        "source": { "Fn::Join" : ["", [ "https://s3.amazonaws.com/", { "Ref" : "ChefConfigBucketName" }, "/encrypted_data_bag_secret" ]]}
-                    },
-                    "/etc/chef/client.rb" : {
-                        "source": { "Fn::Join" : ["", [ "https://s3.amazonaws.com/", { "Ref" : "ChefConfigBucketName" }, "/client.rb" ]]}
-                    },
-                    "/etc/chef/first-boot.json" : {
-                        "source": { "Fn::Join" : ["", [ "https://s3.amazonaws.com/", { "Ref" : "ChefConfigBucketName" }, "/first-boot.json" ]]}
-                    }
+              "files" : {
+                  "/etc/chef/run_chef-client.cmd" : {
+                    "content" : { "Fn::Join" : ["", [
+                      "SET \"PATH=%PATH%;C:/opscode/chef/bin;C:/opscode/chef/embedded/bin\" \n",
+                      "chef-client -c c:/etc/chef/client.rb -j c:/etc/chef/first-boot.json ",
+                          " --environment ", { "Ref" : "ChefEnvironment" }, 
+                          " --logfile c:/etc/chef/chef-bootstrap.log \n"
+                    ]]},
+                    "encoding": "plain"
+                  },
+                  "/etc/chef/add_bootstrap_user.cmd" : {
+                    "content" : { "Fn::Join" : ["", [
+                        "net user bootstrapper BootMeBaby123 /add\n",
+                        "net localgroup administrators bootstrapper /add\n"
+                    ]]},
+                    "encoding": "plain"
+                  },
+                  "/etc/chef/enable_winrm.cmd" : {
+                    "content" : { "Fn::Join" : ["", [
+                        "winrm quickconfig -q\n",
+                        "winrm set winrm/config/winrs @{MaxMemoryPerShellMB=\"300\"}\n",
+                        "winrm set winrm/config @{MaxTimeoutms=\"1800000\"}\n",
+                        "winrm set winrm/config/service @{AllowUnencrypted=\"true\"}\n",
+                        "winrm set winrm/config/service/auth @{Basic=\"true\"}\n"
+                    ]]},
+                    "encoding": "plain"
+                  },
+                  "/etc/chef/chef-client-latest.msi" : {
+                      "source": "http://www.opscode.com/chef/install.msi"
+                  },
+                  "/etc/chef/validation.pem" : {
+                      "source": { "Fn::Join" : ["", [ "https://s3.amazonaws.com/", { "Ref" : "ChefConfigBucketName" }, "/validation.pem" ]]}
+                  },
+                  "/etc/chef/encrypted_data_bag_secret" : {
+                      "source": { "Fn::Join" : ["", [ "https://s3.amazonaws.com/", { "Ref" : "ChefConfigBucketName" }, "/encrypted_data_bag_secret" ]]}
+                  },
+                  "/etc/chef/client.rb" : {
+                      "source": { "Fn::Join" : ["", [ "https://s3.amazonaws.com/", { "Ref" : "ChefConfigBucketName" }, "/client.rb" ]]}
+                  },
+                  "/etc/chef/first-boot.json" : {
+                      "source": { "Fn::Join" : ["", [ "https://s3.amazonaws.com/", { "Ref" : "ChefConfigBucketName" }, "/first-boot.json" ]]}
+                  }
+              },
+              "commands" : {
+                "1-users" : {
+                  "command" : "C:\\etc\\chef\\add_bootstrap_user.cmd"
+                },
+                "2-winrm" : {
+                  "command" : "C:\\etc\\chef\\enable_winrm.cmd"
+                },
+                "3-install-chef" : {
+                  "command" : "msiexec /qb /i c:\\etc\\chef\\chef-client-latest.msi"
+                },
+                "4-run-chef-client" : {
+                  "command" : "C:\\etc\\chef\\run_chef-client.cmd"
                 }
+              }
             }
         },
         "AWS::CloudFormation::Authentication" : {
@@ -214,6 +209,24 @@
                 "buckets" : [ { "Ref" : "ChefConfigBucketName" } ]
             }
         }
+      },
+      "Properties": {
+        "SpotPrice" : { "Ref" : "SpotPrice" },
+        "ImageId": { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
+        "SecurityGroups": [ { "Ref": "InstanceSecurityGroup" } ],
+        "InstanceType": { "Ref": "InstanceType" },
+        "KeyName": {  "Ref": "KeyName"  },
+        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+            "<script>\n",
+            "mkdir C:\\etc \n",
+            "mkdir C:\\etc\\chef \n",
+            "cfn-init -v -s ", { "Ref" : "AWS::StackName" }, " -r LaunchConfig ",
+                "    --access-key ",  { "Ref" : "CfnKeys" },
+                "    --secret-key ", {"Fn::GetAtt": ["CfnKeys", "SecretAccessKey"]},
+                "    --region ", { "Ref" : "AWS::Region" }, "\n",
+            "cfn-signal.exe -e %ERRORLEVEL% ", { "Fn::Base64" : { "Ref" : "ChefBootstrapWaitHandle" }}, "\n",
+            "</script>"
+          ]]}}
       }
     },
     "ChefBootstrapWaitHandle" : {
@@ -224,7 +237,6 @@
       "DependsOn" : "LaunchConfig",
       "Properties" : {
         "Handle" : {"Ref" : "ChefBootstrapWaitHandle"},
-        "Count" : "3",
         "Timeout" : "1800"
       }
     }
