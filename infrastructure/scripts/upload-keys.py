@@ -24,7 +24,7 @@ parser.add_argument("-l", "--log", dest='log_level', default='WARNING',
                     help="The logging level to use. [default: WARNING]")
 args = parser.parse_args()
 
-configure_logging(logger, args.log_level)
+configure_logging(log, args.log_level)
 
 def isSelected(region):
     return True if RegionMap[region].find(args.region) != -1 else False
