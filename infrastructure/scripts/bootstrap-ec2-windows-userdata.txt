@@ -1,0 +1,7 @@
+<script>
+echo ============  								>>c:\userdate-bootstrap.log 2>&1
+date /t 										>>c:\userdata-bootstrap.log 2>&1
+time /t 										>>c:\userdata-bootstrap.log 2>&1
+net user bootstrapper BootMeBaby123 /add 		>>c:\userdate-bootstrap.log 2>&1
+net localgroup administrators bootstrapper /add >>c:\userdate-bootstrap.log 2>&1
+</script>

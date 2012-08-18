@@ -1,0 +1,1 @@
+knife ec2 server create -I ami-bf9793cb -f m1.small --region "eu-west-1" --availability-zone "eu-west-1b" --user-data ./bootstrap-ec2-windows-userdata.txt

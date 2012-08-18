@@ -1,0 +1,10 @@
+#!/usr/bin/env rake
+
+desc "Launch new EC2 instances to run integration tests"
+task :integration_test do
+	puts "TODO: Fire up new EC2 machine..."
+	puts "TODO: Converge..."
+	puts "TODO: Check it all worked..."
+end
+
+task :default => 'integration_test'
