@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import argparse
 import boto
+from boto_cli import configure_logging
 from boto_cli.iam.accountinfo import AccountInfo
 from boto_cli.iam.userinfo import UserInfo
 import logging
@@ -15,12 +16,7 @@ parser.add_argument("-l", "--log", dest='log_level', default='WARNING',
                     help="The logging level to use. [default: WARNING]")
 args = parser.parse_args()
 
-# configure logging
-log.setLevel(getattr(logging, args.log_level.upper()))
-# define a Handler which writes INFO messages or higher to the sys.stderr
-console_handler = logging.StreamHandler()
-console_handler.setLevel(log.getEffectiveLevel())
-log.addHandler(console_handler)
+configure_logging(log, args.log_level)
 
 # execute business logic
 credentials = {'aws_access_key_id': args.aws_access_key_id, 'aws_secret_access_key': args.aws_secret_access_key}

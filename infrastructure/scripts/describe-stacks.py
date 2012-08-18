@@ -2,6 +2,9 @@
 import argparse
 import boto
 import boto.cloudformation
+from boto_cli import configure_logging
+import logging
+log = logging.getLogger('boto_cli')
 from pprint import pprint
 
 # NOTE: equivalent of https://github.com/boto/boto/pull/891 until upstream release catches up.
@@ -14,14 +17,19 @@ parser = argparse.ArgumentParser(description='Describe CloudFormation stacks in 
 parser.add_argument("-r", "--region", help="A region substring selector (e.g. 'us-west')")
 parser.add_argument("--access_key_id", dest='aws_access_key_id', help="Your AWS Access Key ID")
 parser.add_argument("--secret_access_key", dest='aws_secret_access_key', help="Your AWS Secret Access Key")
+parser.add_argument("-v", "--verbose", action='store_true') # TODO: drop in favor of a log formatter?!
+parser.add_argument("-l", "--log", dest='log_level', default='WARNING',
+                    choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+                    help="The logging level to use. [default: WARNING]")
 args = parser.parse_args()
 
-credentials = {'aws_access_key_id': args.aws_access_key_id, 'aws_secret_access_key': args.aws_secret_access_key}
+configure_logging(log, args.log_level)
 
 def isSelected(region):
     return True if region.name.find(args.region) != -1 else False
 
 # execute business logic
+credentials = {'aws_access_key_id': args.aws_access_key_id, 'aws_secret_access_key': args.aws_secret_access_key}
 heading = "Describing CloudFormation stacks"
 regions = boto.cloudformation.regions()
 if args.region:
@@ -35,6 +43,9 @@ for region in regions:
         cfn = boto.connect_cloudformation(region=region, **credentials)
         stacks = cfn.describe_stacks()
         for stack in stacks:
-            pprint(vars(stack), indent=2)
+            print stack.stack_name
+            if args.verbose:
+                pprint(vars(stack), indent=2)
+            log.debug(vars(stack))
     except boto.exception.BotoServerError, e:
-        print e.error_message
+        log.error(e.error_message)

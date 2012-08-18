@@ -1,0 +1,244 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "AWS CloudFormation Template: Create an Amazon EC2 instance running Amazon EBS-Backed Windows Server 2008 R2 English 64-bit - Base for CloudFormation (https://aws.amazon.com/amis/microsoft-windows-server-2008-r2-base-cloudformation). You will be billed for the AWS resources used if you create a stack from this template.",
+
+  "Parameters" : {
+    "KeyName" : {
+      "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the instance",
+      "Type" : "String"
+    },
+    "NotificationTopic" : {
+      "Description" : "SNS topic ARN to notify of Auto Scaling events.",
+      "Type" : "String"
+    },
+    "ChefConfigBucketName" : {
+       "Description" : "S3 bucket containing Chef config files (validation.pem, encrypted_data_bag_secret, client.rb, first-boot.json",
+       "Type" : "String"
+    },
+    "ChefEnvironment" : {
+       "Description" : "Chef environment",
+       "Type" : "String",
+       "Default" : "_default"
+    },
+    "InstanceType" : {
+      "Description" : "EC2 instance type to provision.",
+      "Type" : "String",
+      "Default" : "m1.small",
+      "AllowedValues" : [ "t1.micro","m1.small","m1.medium","m1.large","m1.xlarge","m2.xlarge","m2.2xlarge","m2.4xlarge","c1.medium","c1.xlarge"],
+      "ConstraintDescription" : "must be a valid EC2 instance type."
+    },
+    "InstanceCountMin" : {
+      "Description" : "Minimum instance count.",
+      "Default" : "1",
+      "Type" : "Number"
+    },
+    "InstanceCountMax" : {
+      "Description" : "Maximum instance count.",
+      "Default" : "2",
+      "Type" : "Number"
+    },
+    "InstanceCountDes" : {
+      "Description" : "Desired instance count.",
+      "Default" : "1",
+      "Type" : "Number"
+    },
+    "SpotPrice" : {
+      "Description" : "Maximum spot price to bid in USD (e.g.: 0.32).",
+      "Default" : "0.1",
+      "Type" : "Number"
+    }
+  },
+
+  "Mappings" : {
+    "RegionMap" : {
+      "us-east-1"      : { "AMI" : "ami-9b40eef2" },
+      "us-west-1"      : { "AMI" : "ami-59fbde1c" },
+      "us-west-2"      : { "AMI" : "ami-bab9368a" },
+      "sa-east-1"      : { "AMI" : "ami-8e538d93" },
+      "eu-west-1"      : { "AMI" : "ami-d99793ad" },
+      "ap-northeast-1" : { "AMI" : "ami-d666d4d7" },
+      "ap-southeast-1" : { "AMI" : "ami-825011d0" }
+    }
+  },
+
+  "Resources" : {
+    "CfnUser" : {
+      "Type" : "AWS::IAM::User",
+      "Properties" : {
+        "Path": "/",
+        "Policies": [{
+          "PolicyName": "root",
+          "PolicyDocument": { "Statement":[{
+            "Effect":"Allow",
+            "Action":[
+              "cloudformation:DescribeStackResource",
+              "s3:Get*",
+              "s3:List*"
+            ],
+            "Resource":"*"
+          }]}
+        }]
+      }
+    },
+    "CfnKeys" : {
+        "Type" : "AWS::IAM::AccessKey",
+        "Properties" : {
+            "UserName" : {"Ref": "CfnUser"}
+        }
+    },
+    "InstanceSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Global - RDP (3389), SSH(22) & chef-server only - WINRM (5985,5986)",
+        "SecurityGroupIngress" : [ 
+        {
+          "IpProtocol" : "tcp",
+          "FromPort" : "22",
+          "ToPort" : "22",
+          "CidrIp" : "0.0.0.0/0"
+        },
+        {
+          "IpProtocol" : "tcp",
+          "FromPort" : "3389",
+          "ToPort" : "3389",
+          "CidrIp" : "0.0.0.0/0"
+        },
+        {
+          "IpProtocol" : "tcp",
+          "FromPort" : "5985",
+          "ToPort" : "5986",
+          "CidrIp" : "23.21.125.10/32"
+        } ]
+      }
+    },
+    "InstanceGroup": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+          "AvailabilityZones": { "Fn::GetAZs" : "" },
+          "LaunchConfigurationName": { "Ref": "LaunchConfig" },
+      		"NotificationConfiguration" : {
+      		  "TopicARN" : { "Ref" : "NotificationTopic" },
+      		  "NotificationTypes" : [ 
+              "autoscaling:EC2_INSTANCE_LAUNCH",
+              "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+              "autoscaling:EC2_INSTANCE_TERMINATE", 
+              "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"
+            ]
+      		},
+      		"Tags": [ { "Key": "Name", 
+                      "Value": { "Fn::Join" : [" - ", [
+                                    { "Ref" : "AWS::StackName" },
+                                    { "Ref": "InstanceType" }  
+                      ]]},
+                     "PropagateAtLaunch" : "true"  } 
+                  ],
+          "MinSize": { "Ref": "InstanceCountMin" },
+          "MaxSize": { "Ref": "InstanceCountMax" }
+      }
+    },
+    "LaunchConfig": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Metadata" : {
+        "AWS::CloudFormation::Init" : { 
+            "config" : {
+              "files" : {
+                  "/etc/chef/run_chef-client.cmd" : {
+                    "content" : { "Fn::Join" : ["", [
+                      "SET \"PATH=%PATH%;C:/opscode/chef/bin;C:/opscode/chef/embedded/bin\" \n",
+                      "chef-client -c c:/etc/chef/client.rb -j c:/etc/chef/first-boot.json ",
+                          " --environment ", { "Ref" : "ChefEnvironment" }, 
+                          " --logfile c:/etc/chef/chef-bootstrap.log \n"
+                    ]]},
+                    "encoding": "plain"
+                  },
+                  "/etc/chef/add_bootstrap_user.cmd" : {
+                    "content" : { "Fn::Join" : ["", [
+                        "net user bootstrapper BootMeBaby123 /add\n",
+                        "net localgroup administrators bootstrapper /add\n"
+                    ]]},
+                    "encoding": "plain"
+                  },
+                  "/etc/chef/enable_winrm.cmd" : {
+                    "content" : { "Fn::Join" : ["", [
+                        "winrm quickconfig -q\n",
+                        "winrm set winrm/config/winrs @{MaxMemoryPerShellMB=\"300\"}\n",
+                        "winrm set winrm/config @{MaxTimeoutms=\"1800000\"}\n",
+                        "winrm set winrm/config/service @{AllowUnencrypted=\"true\"}\n",
+                        "winrm set winrm/config/service/auth @{Basic=\"true\"}\n"
+                    ]]},
+                    "encoding": "plain"
+                  },
+                  "/etc/chef/chef-client-latest.msi" : {
+                      "source": "http://www.opscode.com/chef/install.msi"
+                  },
+                  "/etc/chef/validation.pem" : {
+                      "source": { "Fn::Join" : ["", [ "https://s3.amazonaws.com/", { "Ref" : "ChefConfigBucketName" }, "/validation.pem" ]]}
+                  },
+                  "/etc/chef/encrypted_data_bag_secret" : {
+                      "source": { "Fn::Join" : ["", [ "https://s3.amazonaws.com/", { "Ref" : "ChefConfigBucketName" }, "/encrypted_data_bag_secret" ]]}
+                  },
+                  "/etc/chef/client.rb" : {
+                      "source": { "Fn::Join" : ["", [ "https://s3.amazonaws.com/", { "Ref" : "ChefConfigBucketName" }, "/client.rb" ]]}
+                  },
+                  "/etc/chef/first-boot.json" : {
+                      "source": { "Fn::Join" : ["", [ "https://s3.amazonaws.com/", { "Ref" : "ChefConfigBucketName" }, "/first-boot.json" ]]}
+                  }
+              },
+              "commands" : {
+                "1-users" : {
+                  "command" : "C:\\etc\\chef\\add_bootstrap_user.cmd"
+                },
+                "2-winrm" : {
+                  "command" : "C:\\etc\\chef\\enable_winrm.cmd"
+                },
+                "3-install-chef" : {
+                  "command" : "msiexec /qb /i c:\\etc\\chef\\chef-client-latest.msi"
+                },
+                "4-run-chef-client" : {
+                  "command" : "C:\\etc\\chef\\run_chef-client.cmd"
+                }
+              }
+            }
+        },
+        "AWS::CloudFormation::Authentication" : {
+            "S3AccessCreds" : {
+                "type" : "S3",
+                "accessKeyId" : { "Ref" : "CfnKeys" },
+                "secretKey" : {"Fn::GetAtt": ["CfnKeys", "SecretAccessKey"]},
+                "buckets" : [ { "Ref" : "ChefConfigBucketName" } ]
+            }
+        }
+      },
+      "Properties": {
+        "SpotPrice" : { "Ref" : "SpotPrice" },
+        "ImageId": { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
+        "SecurityGroups": [ { "Ref": "InstanceSecurityGroup" } ],
+        "InstanceType": { "Ref": "InstanceType" },
+        "KeyName": {  "Ref": "KeyName"  },
+        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+            "<script>\n",
+            "mkdir C:\\etc \n",
+            "mkdir C:\\etc\\chef \n",
+            "cfn-init -v -s ", { "Ref" : "AWS::StackName" }, " -r LaunchConfig ",
+                "    --access-key ",  { "Ref" : "CfnKeys" },
+                "    --secret-key ", {"Fn::GetAtt": ["CfnKeys", "SecretAccessKey"]},
+                "    --region ", { "Ref" : "AWS::Region" }, "\n",
+            "cfn-signal.exe -e %ERRORLEVEL% ", { "Fn::Base64" : { "Ref" : "ChefBootstrapWaitHandle" }}, "\n",
+            "</script>"
+          ]]}}
+      }
+    },
+    "ChefBootstrapWaitHandle" : {
+      "Type" : "AWS::CloudFormation::WaitConditionHandle"
+    },
+    "WaitForInstance" : {
+      "Type" : "AWS::CloudFormation::WaitCondition",
+      "DependsOn" : "LaunchConfig",
+      "Properties" : {
+        "Handle" : {"Ref" : "ChefBootstrapWaitHandle"},
+        "Timeout" : "1800"
+      }
+    }
+  }
+}
