@@ -14,7 +14,7 @@ def wait_for_stack(stack_name)
 		stack_status = stacks.xpath('//StackStatus').text
 		stack_status_reason = stacks.xpath('//StackStatusReason').text
 
-		sleep 5
+		sleep 60
 	end
 
 	fail("Stack creation failed: #{stack_status} - #{stack_status_reason}") if (stack_status != "CREATE_COMPLETE")
@@ -28,7 +28,7 @@ task :integration_test_windows do
 	stack_name = "Windows2008R2SpotInstance-test-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
 	template = "./templates/Windows2008R2SpotInstance.template"
 
-	puts "[WARNING] This takes about 20 min to run, and will start & stop real EC2 instances"
+	puts "[WARNING] This takes about 30 min to run, and will start & stop real EC2 instances"
 
 	puts "Validating template: #{template}"
 	`./scripts/validate-template.py #{template}`
@@ -46,7 +46,7 @@ task :integration_test_ubuntu do
 	stack_name = "Ubuntu12-04-test-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
 	template = "./templates/Ubuntu1204SpotInstance.template"
 
-	puts "[WARNING] This takes about 20 min to run, and will start & stop real EC2 instances"
+	puts "[WARNING] This takes about 30 min to run, and will start & stop real EC2 instances"
 
 	puts "Validating template: #{template}"
 	`./scripts/validate-template.py #{template}`
