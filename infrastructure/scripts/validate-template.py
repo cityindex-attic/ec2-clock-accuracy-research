@@ -5,7 +5,10 @@ import boto.cloudformation
 from boto_cli import configure_logging
 import logging
 log = logging.getLogger('boto_cli')
+import os
+import platform
 from pprint import pprint
+import sys
 
 # NOTE: equivalent of https://github.com/boto/boto/pull/891 until upstream release catches up.
 import patch9d3c9f0
@@ -69,3 +72,5 @@ try:
         printResult(args.template, template)
 except boto.exception.BotoServerError, e:
     log.error(e.error_message)
+    # REVIEW: 13 denotes 'The data is invalid.' - in general it might be easier to go with just 1 for the use case at hand?
+    sys.exit(13 if platform.system() == 'Windows' else os.EX_DATAERR)
