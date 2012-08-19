@@ -1,4 +1,27 @@
 #!/usr/bin/env rake
+require 'Nokogiri'
+
+STDOUT.sync = true
+
+def wait_for_stack(stack_name)
+	print "Waiting for stack to initialise .."
+	stack_status = "CREATE_IN_PROGRESS"
+	stack_status_reason = ""
+	while stack_status == "CREATE_IN_PROGRESS"
+		print "."
+
+		stacks =  Nokogiri::XML(`./scripts/describe-stacks.py -r eu-west-1 -s #{stack_name} --xml`)
+		stack_status = stacks.xpath('//StackStatus').text
+		stack_status_reason = stacks.xpath('//StackStatusReason').text
+
+		sleep 5
+	end
+
+	fail("Stack creation failed: #{stack_status} - #{stack_status_reason}") if (stack_status != "CREATE_COMPLETE")
+	
+	puts stack_status
+	puts "Stack created successfully"
+end
 
 desc "Launch new Windows EC2 instances to run integration tests"
 task :integration_test_windows do
@@ -12,7 +35,10 @@ task :integration_test_windows do
 	puts "Launching Windows cloud stack in eu-west-1 region named #{stack_name}"
 	`./scripts/create-stacks.py #{stack_name} #{template} -p KeyName=labs-commander -p NotificationTopic=arn:aws:sns:{REGION}:{ACCOUNT}:as-labs-cityindex-com -p ChefConfigBucketName=cityindex.labs.chef_bootstrap -p ChefEnvironment=ec2-clock-accuracy-research_test -r eu-west --enable_iam`
 	
-	puts "TODO: Check it all worked..."
+	wait_for_stack(stack_name)
+
+	puts "Deleting stack #{stack_name}"
+	`./scripts/delete-stacks.py #{stack_name} -r eu-west`
 end
 
 desc "Launch new Ubuntu EC2 instances to run integration tests"
@@ -27,7 +53,10 @@ task :integration_test_ubuntu do
 	puts "Launching Ubuntu cloud stack in eu-west-1 region named #{stack_name}"
 	`./scripts/create-stacks.py #{stack_name} #{template} -p KeyName=labs-commander -p NotificationTopic=arn:aws:sns:{REGION}:{ACCOUNT}:as-labs-cityindex-com -p ChefConfigBucketName=cityindex.labs.chef_bootstrap -p ChefEnvironment=ec2-clock-accuracy-research_test -r eu-west --enable_iam`
 
-	puts "TODO: Check it all worked..."
+	wait_for_stack(stack_name)
+
+	puts "Deleting stack #{stack_name}"
+	`./scripts/delete-stacks.py #{stack_name} -r eu-west`
 end
 
-task :default => 'integration_test_ubuntu'
+task :default => 'integration_test_windows'
