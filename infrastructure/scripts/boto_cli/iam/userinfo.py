@@ -30,6 +30,9 @@ class UserInfo:
         except boto.exception.BotoServerError, e:
             # NOTE: given some information can be deduced from the exception still, the lack of permissions is 
             # considered a normal condition still and the exception handled/logged accordingly. 
+            # TODO: Identify proper exception code for this condition (rather than raising InvalidClientTokenId only).
+            if e.error_code == 'InvalidClientTokenId':
+                raise
             self.arn = e.error_message.rpartition(' ')[2]
             self.name = e.error_message.rpartition('/')[2]
             self.log.debug(e.error_message)
