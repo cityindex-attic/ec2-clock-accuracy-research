@@ -268,7 +268,7 @@
       "DependsOn" : "LaunchConfig",
       "Properties" : {
         "Handle" : {"Ref" : "ChefBootstrapWaitHandle"},
-        "Timeout" : "91800"
+        "Timeout" : "1800"
       }
     }
   },
