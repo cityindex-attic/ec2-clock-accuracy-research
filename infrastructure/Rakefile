@@ -8,13 +8,11 @@ def wait_for_stack(stack_name)
 	stack_status = "CREATE_IN_PROGRESS"
 	stack_status_reason = ""
 	while stack_status == "CREATE_IN_PROGRESS"
-		print "."
+		print "."; sleep 15; print "."; sleep 15; print "."; sleep 15; print "."; sleep 15 # 4 . over 60 sec
 
 		stacks =  Nokogiri::XML(`./scripts/describe-stacks.py -r eu-west-1 -s #{stack_name} --xml`)
 		stack_status = stacks.xpath('//StackStatus').text
-		stack_status_reason = stacks.xpath('//StackStatusReason').text
-
-		sleep 60
+		stack_status_reason = stacks.xpath('//StackStatusReason').text		
 	end
 
 	fail("Stack creation failed: #{stack_status} - #{stack_status_reason}") if (stack_status != "CREATE_COMPLETE")
@@ -32,6 +30,7 @@ task :integration_test_windows do
 
 	puts "Validating template: #{template}"
 	`./scripts/validate-template.py #{template}`
+
 	puts "Launching Windows cloud stack in eu-west-1 region named #{stack_name}"
 	`./scripts/create-stacks.py #{stack_name} #{template} -p KeyName=labs-commander -p NotificationTopic=arn:aws:sns:{REGION}:{ACCOUNT}:as-labs-cityindex-com -p ChefConfigBucketName=cityindex.labs.chef_bootstrap -p ChefEnvironment=ec2-clock-accuracy-research_test -r eu-west --enable_iam`
 	
@@ -50,6 +49,7 @@ task :integration_test_ubuntu do
 
 	puts "Validating template: #{template}"
 	`./scripts/validate-template.py #{template}`
+
 	puts "Launching Ubuntu cloud stack in eu-west-1 region named #{stack_name}"
 	`./scripts/create-stacks.py #{stack_name} #{template} -p KeyName=labs-commander -p NotificationTopic=arn:aws:sns:{REGION}:{ACCOUNT}:as-labs-cityindex-com -p ChefConfigBucketName=cityindex.labs.chef_bootstrap -p ChefEnvironment=ec2-clock-accuracy-research_test -r eu-west --enable_iam`
 
