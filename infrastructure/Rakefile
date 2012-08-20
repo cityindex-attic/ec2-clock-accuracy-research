@@ -1,10 +1,74 @@
 #!/usr/bin/env rake
+require 'Nokogiri'
+require 'json'
 
-desc "Launch new EC2 instances to run integration tests"
-task :integration_test do
-	puts "TODO: Fire up new EC2 machine..."
-	puts "TODO: Converge..."
-	puts "TODO: Check it all worked..."
+STDOUT.sync = true
+
+def wait_for_stack(stack_name)
+	print "Waiting for stack to initialise .."
+	stack_status = "CREATE_IN_PROGRESS"
+	stack_status_reason = ""
+	while stack_status == "CREATE_IN_PROGRESS"
+		print "."; sleep 15; print "."; sleep 15; print "."; sleep 15; print "."; sleep 15 # 4 . over 60 sec
+
+		result = `./scripts/describe-stacks.py -r eu-west-1 -s #{stack_name} --xml`
+		stacks =  Nokogiri::XML(result)
+		stack_status = stacks.xpath('//StackStatus').text
+		stack_status_reason = stacks.xpath('//StackStatusReason').text	
+		stack_init_log = stacks.xpath('//CfnInitLogAsGzipBase64').text	
+	end
+
+	stack_status_reason = stacks.xpath('//StackStatusReason').text	
+	stack_init_log = JSON.parse(stacks.xpath('//OutputValue').text)
+
+	puts "cfn-init.log for #{stack_init_log.keys[0]}"
+	puts "=========================================="
+	puts `./scripts/decode-logs.py #{stack_init_log.values[0]}`
+
+	fail("Stack creation failed: #{stack_status} - #{stack_status_reason}") if (stack_status != "CREATE_COMPLETE")
+	
+	puts stack_status
+	puts "Stack created successfully"
 end
 
-task :default => 'integration_test'
+desc "Launch new Windows EC2 instances to run integration tests"
+task :integration_test_windows do
+	stack_name = "Windows2008R2SpotInstance-test-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
+	template = "./templates/Windows2008R2SpotInstance.template"
+
+	puts "[WARNING] This takes about 30 min to run, and will start & stop real EC2 instances"
+
+	puts "Validating template: #{template}"
+	`./scripts/validate-template.py #{template}`
+	fail() if $?.to_i != 0
+
+	puts "Launching Windows cloud stack in eu-west-1 region named #{stack_name}"
+	`./scripts/create-stacks.py #{stack_name} #{template} -p KeyName=labs-commander -p NotificationTopic=arn:aws:sns:{REGION}:{ACCOUNT}:as-labs-cityindex-com -p ChefConfigBucketName=cityindex.labs.chef_bootstrap -p ChefEnvironment=ec2-clock-accuracy-research_test -r eu-west --enable_iam`
+	
+	wait_for_stack(stack_name)
+
+	puts "Deleting stack #{stack_name}"
+	`./scripts/delete-stacks.py #{stack_name} -r eu-west`
+end
+
+desc "Launch new Ubuntu EC2 instances to run integration tests"
+task :integration_test_ubuntu do
+	stack_name = "Ubuntu12-04-test-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
+	template = "./templates/Ubuntu1204SpotInstance.template"
+
+	puts "[WARNING] This takes about 30 min to run, and will start & stop real EC2 instances"
+
+	puts "Validating template: #{template}"
+	`./scripts/validate-template.py #{template}`
+	fail() if $?.to_i != 0
+
+	puts "Launching Ubuntu cloud stack in eu-west-1 region named #{stack_name}"
+	`./scripts/create-stacks.py #{stack_name} #{template} -p KeyName=labs-commander -p NotificationTopic=arn:aws:sns:{REGION}:{ACCOUNT}:as-labs-cityindex-com -p ChefConfigBucketName=cityindex.labs.chef_bootstrap -p ChefEnvironment=ec2-clock-accuracy-research_test -r eu-west --enable_iam`
+
+	wait_for_stack(stack_name)
+
+	puts "Deleting stack #{stack_name}"
+	`./scripts/delete-stacks.py #{stack_name} -r eu-west`
+end
+
+task :default => 'integration_test_ubuntu'

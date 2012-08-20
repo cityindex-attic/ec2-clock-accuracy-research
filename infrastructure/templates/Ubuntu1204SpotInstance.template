@@ -12,10 +12,19 @@
       "Description" : "SNS topic ARN to notify of Auto Scaling events.",
       "Type" : "String"
     },
+    "ChefConfigBucketName" : {
+       "Description" : "S3 bucket containing Chef config files (validation.pem, encrypted_data_bag_secret",
+       "Type" : "String"
+    },
+    "ChefEnvironment" : {
+       "Description" : "Chef environment",
+       "Type" : "String",
+       "Default" : "_default"
+    },
     "InstanceType" : {
       "Description" : "EC2 instance type to provision.",
       "Type" : "String",
-      "Default" : "t1.micro",
+      "Default" : "m1.small",
       "AllowedValues" : [ "t1.micro","m1.small","m1.medium","m1.large","m1.xlarge","m2.xlarge","m2.2xlarge","m2.4xlarge","c1.medium","c1.xlarge"],
       "ConstraintDescription" : "must be a valid EC2 instance type."
     },
@@ -36,25 +45,49 @@
     },
     "SpotPrice" : {
       "Description" : "Maximum spot price to bid in USD (e.g.: 0.32).",
-      "Default" : "0.01",
+      "Default" : "0.1",
       "Type" : "Number"
     }
   },
 
   "Mappings" : {
     "RegionMap" : {
-      "us-east-1"      : { "AMI" : "ami-82fa58eb" },
-      "us-west-1"      : { "AMI" : "ami-5965401c" },
-      "us-west-2"      : { "AMI" : "ami-4438b474" },
-      "sa-east-1"      : { "AMI" : "ami-5c03dd41" },
-      "eu-west-1"      : { "AMI" : "ami-ab9491df" },
-      "ap-northeast-1" : { "AMI" : "ami-c641f2c7" },
-      "ap-southeast-1" : { "AMI" : "ami-acf6b0fe" }
+      "us-east-1"      : { "AMI" : "ami-a29943cb" },
+      "us-west-1"      : { "AMI" : "ami-87712ac2" },
+      "us-west-2"      : { "AMI" : "ami-20800c10" },
+      "sa-east-1"      : { "AMI" : "ami-8cd80691" },
+      "eu-west-1"      : { "AMI" : "ami-e1e8d395" },
+      "ap-northeast-1" : { "AMI" : "ami-60c77761" },
+      "ap-southeast-1" : { "AMI" : "ami-a4ca8df6" }
     }
   },
 
   "Resources" : {
-  "InstanceSecurityGroup" : {
+    "CfnUser" : {
+      "Type" : "AWS::IAM::User",
+      "Properties" : {
+        "Path": "/",
+        "Policies": [{
+          "PolicyName": "root",
+          "PolicyDocument": { "Statement":[{
+            "Effect":"Allow",
+            "Action":[
+              "cloudformation:DescribeStackResource",
+              "s3:Get*",
+              "s3:List*"
+            ],
+            "Resource":"*"
+          }]}
+        }]
+      }
+    },
+    "CfnKeys" : {
+        "Type" : "AWS::IAM::AccessKey",
+        "Properties" : {
+            "UserName" : {"Ref": "CfnUser"}
+        }
+    },
+    "InstanceSecurityGroup" : {
       "Type" : "AWS::EC2::SecurityGroup",
       "Properties" : {
         "GroupDescription" : "Enable SSH access via port 22",
@@ -68,29 +101,181 @@
     },
 
     "InstanceGroup": {
-            "Type": "AWS::AutoScaling::AutoScalingGroup",
-            "Properties": {
-                "AvailabilityZones": { "Fn::GetAZs" : "" },
-                "LaunchConfigurationName": { "Ref": "LaunchConfig" },
-		"NotificationConfiguration" : {
-		  "TopicARN" : { "Ref" : "NotificationTopic" },
-		  "NotificationTypes" : [ "autoscaling:EC2_INSTANCE_LAUNCH","autoscaling:EC2_INSTANCE_LAUNCH_ERROR","autoscaling:EC2_INSTANCE_TERMINATE", "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"]
-		},
-		"Tags": [ { "Key": "Name", "Value": "test-latency-collector", "PropagateAtLaunch" : "true"  } ],
-                "MinSize": { "Ref": "InstanceCountMin" },
-                "MaxSize": { "Ref": "InstanceCountMax" }
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+          "AvailabilityZones": { "Fn::GetAZs" : "" },
+          "LaunchConfigurationName": { "Ref": "LaunchConfig" },
+          "NotificationConfiguration" : {
+            "TopicARN" : { "Ref" : "NotificationTopic" },
+            "NotificationTypes" : [ 
+              "autoscaling:EC2_INSTANCE_LAUNCH",
+              "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+              "autoscaling:EC2_INSTANCE_TERMINATE", 
+              "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"
+            ]
+          },
+          "Tags": [ { "Key": "Name", 
+                      "Value": { "Fn::Join" : [" - ", [
+                                    { "Ref" : "AWS::StackName" },
+                                    { "Ref": "InstanceType" }  
+                      ]]},
+                     "PropagateAtLaunch" : "true"  } 
+                  ],
+          "MinSize": { "Ref": "InstanceCountMin" },
+          "MaxSize": { "Ref": "InstanceCountMax" }
+      }
+    },
+	 "LaunchConfig": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Metadata" : {
+        "AWS::CloudFormation::Init" : { 
+            "config" : {
+              "packages" : {
+                "rubygems" : {
+                    "chef" : [],
+                    "ohai" : []
+                },
+                "apt" : {
+                    "ruby"            : [],
+                    "ruby-dev"        : [],
+                    "libopenssl-ruby" : [],
+                    "rdoc"            : [],
+                    "ri"              : [],
+                    "irb"             : [],
+                    "build-essential" : [],
+                    "wget"            : [],
+                    "ssl-cert"        : [],
+                    "rubygems"        : [],
+                    "s3cmd"           : []
+                }
+              },
+              "files" : {
+                  "/usr/bin/encode_log.py": {
+                      "content" : { "Fn::Join" : ["", [
+                        "#!/usr/bin/python \n",
+                        "import sys \n",
+                        "import base64 \n",
+                        "from StringIO import StringIO \n",
+                        "from gzip import GzipFile \n",
+                        "out = StringIO() \n",
+                        "f = GzipFile(fileobj=out, mode='w') \n",
+                        "f.write(open(sys.argv[1], 'r').read()) \n",
+                        "f.close() \n",
+                        "print base64.b64encode(out.getvalue()) \n",
+                        "\n"
+                      ]]},
+                      "encoding": "plain",
+                      "mode"  : "000755",
+                      "owner" : "root",
+                      "group" : "root"
+                  },
+                  "/etc/chef/client.rb" : {
+                      "content" : { "Fn::Join" : ["", [
+                        "log_level               :info     \n",
+                        "log_location             STDOUT    \n",
+                        "chef_server_url        \"http://chef.labs.cityindex.com\" \n",
+                        "validation_client_name \"chef-validator\" \n",
+                        "client_key             \"/etc/chef/client.pem\" \n",
+                        "validation_key         \"/etc/chef/validation.pem\" \n"
+                      ]]},
+                      "encoding": "plain",
+                      "mode"  : "000644",
+                      "owner" : "root",
+                      "group" : "root"
+                  },
+                  "/etc/chef/first-boot.json" : {
+                      "content" : { "Fn::Join" : ["", [
+                        "{                      \n",
+                        "   \"run_list\": []    \n",
+                        "}                      \n"
+                      ]]},
+                      "encoding": "plain",
+                      "mode"  : "000644",
+                      "owner" : "root",
+                      "group" : "root"
+                  },
+                  "/etc/chef/validation.pem" : {
+                      "source": { "Fn::Join" : ["", [ "https://s3.amazonaws.com/", { "Ref" : "ChefConfigBucketName" }, "/validation.pem" ]]},
+                      "mode"  : "000644",
+                      "owner" : "root",
+                      "group" : "root"
+                  },
+                  "/etc/chef/encrypted_data_bag_secret" : {
+                      "source": { "Fn::Join" : ["", [ "https://s3.amazonaws.com/", { "Ref" : "ChefConfigBucketName" }, "/encrypted_data_bag_secret" ]]},
+                      "mode"  : "000644",
+                      "owner" : "root",
+                      "group" : "root"
+                  }
+              }
             }
         },
-	"LaunchConfig": {
-            "Type": "AWS::AutoScaling::LaunchConfiguration",
-            "Properties": {
-                "SpotPrice" : { "Ref" : "SpotPrice" },
-                "ImageId": { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
-                "SecurityGroups": [ { "Ref": "InstanceSecurityGroup" } ],
-                "InstanceType": { "Ref": "InstanceType" },
-		"UserData" : { "Fn::Base64" : "80" },
-		"KeyName": {  "Ref": "KeyName"  }
+        "AWS::CloudFormation::Authentication" : {
+            "S3AccessCreds" : {
+                "type" : "S3",
+                "accessKeyId" : { "Ref" : "CfnKeys" },
+                "secretKey" : {"Fn::GetAtt": ["CfnKeys", "SecretAccessKey"]},
+                "buckets" : [ { "Ref" : "ChefConfigBucketName" } ]
             }
         }
+      },
+      "Properties": {
+        "SpotPrice" : { "Ref" : "SpotPrice" },
+        "ImageId": { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
+        "SecurityGroups": [ { "Ref": "InstanceSecurityGroup" } ],
+        "InstanceType": { "Ref": "InstanceType" },
+        "KeyName": {  "Ref": "KeyName"  },
+        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+            "#!/bin/bash -v \n",
+            "function error_exit\n",
+            "{\n",
+            "CFNINIT=`/usr/bin/encode_log.py /var/log/cfn-init.log`\n",
+            "cfn-signal -e 1 -r \"$1\" ",
+                "--data  \"$CFNINIT\" ",
+                "'", { "Ref" : "ChefBootstrapWaitHandle" }, "'\n",
+            " exit 1\n",
+            "}\n",
+
+            "apt-get -y install python-setuptools\n",
+            "easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz\n",
+
+            "cfn-init -v -s ", { "Ref" : "AWS::StackName" }, " -r LaunchConfig ",
+                "    --access-key ",  { "Ref" : "CfnKeys" },
+                "    --secret-key ", {"Fn::GetAtt": ["CfnKeys", "SecretAccessKey"]},
+                "    --region ", { "Ref" : "AWS::Region" }, " || error_exit 'Failed to run cfn-init'\n",
+
+            "# Fixup path and links for the bootstrap script\n",
+            "export PATH=$PATH:/var/lib/gems/1.8/bin\n",
+
+            "# Bootstrap chef\n",
+            "chef-client -j /etc/chef/first-boot.json ",
+                          " --environment ", { "Ref" : "ChefEnvironment" }, 
+                          " --logfile /var/log/cfn-init.log ",
+                          "2>&1 || error_exit 'Failed to initialize host via chef client' \n",
+
+            "# If all went well, signal success\n",
+            "CFNINIT=`/usr/bin/encode_log.py /var/log/cfn-init.log`\n",
+            "cfn-signal -e $? ",
+                "--data  \"$CFNINIT\" ",
+                "'", { "Ref" : "ChefBootstrapWaitHandle" }, "'\n"
+          ]]}}
+      }
+    },
+    "ChefBootstrapWaitHandle" : {
+      "Type" : "AWS::CloudFormation::WaitConditionHandle"
+    },
+    "WaitForInstance" : {
+      "Type" : "AWS::CloudFormation::WaitCondition",
+      "DependsOn" : "LaunchConfig",
+      "Properties" : {
+        "Handle" : {"Ref" : "ChefBootstrapWaitHandle"},
+        "Timeout" : "1800"
+      }
+    }
+  },
+  "Outputs" : {
+      "CfnInitLogAsGzipBase64" : {
+          "Value" : { "Fn::GetAtt" : [ "WaitForInstance", "Data" ]},
+          "Description" : "Server / chef bootstrap"
+      }
   }
 }
