@@ -1,16 +1,25 @@
 current_dir = File.dirname(__FILE__)
-log_level                :info
-log_location             STDOUT
+
 node_name                "{your workstation name}"
 client_key               "#{current_dir}/{your_pem}.pem"
-validation_client_name   "validator"
+
+validation_client_name   "chef-validator"
 validation_key           "#{current_dir}/validator.pem"
 
-chef_server_url          "https://api.opscode.com/organizations/{your_org}"
-cookbook_path            ["#{current_dir}/../cookbooks"]
-encrypted_data_bag_secret "#{current_dir}/data_bag_key"
+chef_server_url          "http://chef.labs.cityindex.com"
 
-knife[:region] 			 	  =	"eu-west-1"
-knife[:aws_ssh_key_id] 	 	  =	"{your_key_name}"
-knife[:aws_access_key_id] = "#{ENV['AWS_ACCESS_KEY_ID']}"
-knife[:aws_secret_access_key] = "#{ENV['AWS_SECRET_ACCESS_KEY']}"
+knife[:region] 			 	  	= "eu-west-1"
+knife[:aws_ssh_key_id] 	 	  	= "{your_key_name}"
+
+#You probably don't need to change these
+
+log_level                :info
+log_location             STDOUT
+
+log_level                :info
+log_location             STDOUT
+cookbook_path            ["#{current_dir}/../cookbooks"]
+encrypted_data_bag_secret "#{current_dir}/encrypted_data_bag_secret"
+
+knife[:aws_access_key_id] 		= "#{ENV['AWS_ACCESS_KEY_ID']}"
+knife[:aws_secret_access_key] 	= "#{ENV['AWS_SECRET_ACCESS_KEY']}"

@@ -1,6 +1,12 @@
 #!/usr/bin/env rake
 require 'nokogiri'
 require 'json'
+require 'rubygems'
+require 'chef'
+
+# Load common, useful tasks from Chef.
+TOPDIR = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+load 'chef/tasks/chef_repo.rake'
 
 STDOUT.sync = true
 
@@ -69,6 +75,13 @@ task :integration_test_ubuntu do
 
 	puts "Deleting stack #{stack_name}"
 	`./scripts/delete-stacks.py #{stack_name} -r eu-west`
+end
+
+desc "Initialise / update chef cookbooks as defined in ./Cheffile"
+task :update_chef_repo do
+	puts "Initializing chef repo using ./Cheffile"
+	puts `librarian-chef update` 
+	puts `librarian-chef show` 
 end
 
 task :default => 'integration_test_ubuntu'
