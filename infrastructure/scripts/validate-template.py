@@ -3,10 +3,9 @@ import argparse
 import boto
 import boto.cloudformation
 from boto_cli import configure_logging
+from boto_cli import ExitCodes
 import logging
 log = logging.getLogger('boto_cli')
-import os
-import platform
 from pprint import pprint
 import sys
 
@@ -72,4 +71,4 @@ try:
         printResult(args.template, template)
 except boto.exception.BotoServerError, e:
     log.error(e.error_message)
-    sys.exit(1)
+    sys.exit(ExitCodes.FAIL)

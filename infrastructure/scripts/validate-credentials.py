@@ -2,12 +2,11 @@
 import argparse
 import boto
 from boto_cli import configure_logging
+from boto_cli import ExitCodes
 from boto_cli.iam.accountinfo import AccountInfo
 from boto_cli.iam.userinfo import UserInfo
 import logging
 log = logging.getLogger('boto_cli')
-import os
-import platform
 import sys
 
 # configure command line argument parsing
@@ -35,4 +34,4 @@ try:
     print "Account alias is '" + account.alias + "' with id " + account.id
 except boto.exception.BotoServerError, e:
     log.error(e.error_message)
-    sys.exit(1)
+    sys.exit(ExitCodes.FAIL)

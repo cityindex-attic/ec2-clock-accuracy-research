@@ -6,3 +6,6 @@ def configure_logging(logger, level):
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logger.getEffectiveLevel())
     logger.addHandler(console_handler)
+
+class ExitCodes:
+    (OK, FAIL) = range(0, 2)
