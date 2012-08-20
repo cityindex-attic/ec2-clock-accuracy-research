@@ -1,5 +1,5 @@
 #!/usr/bin/env rake
-require 'Nokogiri'
+require 'nokogiri'
 require 'json'
 
 STDOUT.sync = true
