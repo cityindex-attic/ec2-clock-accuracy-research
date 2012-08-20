@@ -1,5 +1,6 @@
 #!/usr/bin/env rake
 require 'Nokogiri'
+require 'json'
 
 STDOUT.sync = true
 
@@ -10,10 +11,19 @@ def wait_for_stack(stack_name)
 	while stack_status == "CREATE_IN_PROGRESS"
 		print "."; sleep 15; print "."; sleep 15; print "."; sleep 15; print "."; sleep 15 # 4 . over 60 sec
 
-		stacks =  Nokogiri::XML(`./scripts/describe-stacks.py -r eu-west-1 -s #{stack_name} --xml`)
+		result = `./scripts/describe-stacks.py -r eu-west-1 -s #{stack_name} --xml`
+		stacks =  Nokogiri::XML(result)
 		stack_status = stacks.xpath('//StackStatus').text
-		stack_status_reason = stacks.xpath('//StackStatusReason').text		
+		stack_status_reason = stacks.xpath('//StackStatusReason').text	
+		stack_init_log = stacks.xpath('//CfnInitLogAsGzipBase64').text	
 	end
+
+	stack_status_reason = stacks.xpath('//StackStatusReason').text	
+	stack_init_log = JSON.parse(stacks.xpath('//OutputValue').text)
+
+	puts "cfn-init.log for #{stack_init_log.keys[0]}"
+	puts "=========================================="
+	puts `./scripts/decode-logs.py #{stack_init_log.values[0]}`
 
 	fail("Stack creation failed: #{stack_status} - #{stack_status_reason}") if (stack_status != "CREATE_COMPLETE")
 	
@@ -57,6 +67,73 @@ task :integration_test_ubuntu do
 
 	puts "Deleting stack #{stack_name}"
 	`./scripts/delete-stacks.py #{stack_name} -r eu-west`
+end
+
+desc "df"
+task :test do
+
+	result = <<eos
+<describe-stacks>
+<region name='eu-west-1'>
+<DescribeStacksResponse >
+  <DescribeStacksResult>
+    <Stacks>
+      <member>
+        <Tags/>
+        <StackId>arn:aws:cloudformation:eu-west-1:860900021006:stack/Ubuntu12-04-test-20120820T134951/8aad5de0-eac5-11e1-be47-5017c38584ea</StackId>
+        <StackStatus>CREATE_COMPLETE</StackStatus>
+        <StackName>Ubuntu12-04-test-20120820T134951</StackName>
+        <StackStatusReason/>
+        <Description>AWS CloudFormation Template: Create an Amazon EC2 instance running the Ubuntu 12.04 AMI. The AMI is chosen based on the region in which the stack is run. **WARNING** This template creates AWS resources. You will be billed for the AWS resources used if you create a stack from this template.</Description>
+        <CreationTime>2012-08-20T12:49:55Z</CreationTime>
+        <Capabilities>
+          <member>CAPABILITY_IAM</member>
+        </Capabilities>
+        <DisableRollback>false</DisableRollback>
+        <Parameters>
+          <member>
+            <ParameterValue>arn:aws:sns:eu-west-1:860900021006:as-labs-cityindex-com</ParameterValue>
+            <ParameterKey>NotificationTopic</ParameterKey>
+          </member>
+          <member>
+            <ParameterValue>ec2-clock-accuracy-research_test</ParameterValue>
+            <ParameterKey>ChefEnvironment</ParameterKey>
+          </member>
+          <member>
+            <ParameterValue>cityindex.labs.chef_bootstrap</ParameterValue>
+            <ParameterKey>ChefConfigBucketName</ParameterKey>
+          </member>
+          <member>
+            <ParameterValue>labs-commander</ParameterValue>
+            <ParameterKey>KeyName</ParameterKey>
+          </member>
+        </Parameters>
+        <Outputs>
+          <member>
+            <OutputValue>{&quot;ip-10-58-247-9.eu-west-1.compute.internal&quot;:&quot;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&quot;}</OutputValue>
+            <Description>Server / chef bootstrap</Description>
+            <OutputKey>CfnInitLogAsGzipBase64</OutputKey>
+          </member>
+        </Outputs>
+      </member>
+    </Stacks>
+  </DescribeStacksResult>
+  <ResponseMetadata>
+    <RequestId>649a8db6-eac6-11e1-bb7d-21f7a4899120</RequestId>
+  </ResponseMetadata>
+</DescribeStacksResponse>
+
+</region>
+</describe-stacks>
+eos
+	stacks =  Nokogiri::XML(result)
+	stack_status = stacks.xpath('//StackStatus').text
+	stack_status_reason = stacks.xpath('//StackStatusReason').text	
+	stack_init_log = JSON.parse(stacks.xpath('//OutputValue').text)
+
+	puts "cfn-init.log for #{stack_init_log.keys[0]}"
+	puts "=========================================="
+	puts `./scripts/decode-logs.py #{stack_init_log.values[0]}`
 end
 
 task :default => 'integration_test_windows'
