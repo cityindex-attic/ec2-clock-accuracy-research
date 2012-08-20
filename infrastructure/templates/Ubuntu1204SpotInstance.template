@@ -150,6 +150,25 @@
                 }
               },
               "files" : {
+                  "/usr/bin/encode_log.py": {
+                      "content" : { "Fn::Join" : ["", [
+                        "#!/usr/bin/python \n",
+                        "import sys \n",
+                        "import base64 \n",
+                        "from StringIO import StringIO \n",
+                        "from gzip import GzipFile \n",
+                        "out = StringIO() \n",
+                        "f = GzipFile(fileobj=out, mode='w') \n",
+                        "f.write(open(sys.argv[1], 'r').read()) \n",
+                        "f.close() \n",
+                        "print base64.b64encode(out.getvalue()) \n",
+                        "\n"
+                      ]]},
+                      "encoding": "plain",
+                      "mode"  : "000755",
+                      "owner" : "root",
+                      "group" : "root"
+                  },
                   "/etc/chef/client.rb" : {
                       "content" : { "Fn::Join" : ["", [
                         "log_level               :info     \n",
@@ -209,9 +228,9 @@
             "#!/bin/bash -v \n",
             "function error_exit\n",
             "{\n",
-            "CFN-INIT=`gzip --to-stdout /var/log/cfn-init.log | base64 -w 0`",
+            "CFNINIT=`/usr/bin/encode_log.py /var/log/cfn-init.log`\n",
             "cfn-signal -e 1 -r \"$1\" ",
-                "--data  \"$CFN-INIT\" ",
+                "--data  \"$CFNINIT\" ",
                 "'", { "Ref" : "ChefBootstrapWaitHandle" }, "'\n",
             " exit 1\n",
             "}\n",
@@ -219,7 +238,7 @@
             "apt-get -y install python-setuptools\n",
             "easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz\n",
 
-           "cfn-init -v -s ", { "Ref" : "AWS::StackName" }, " -r LaunchConfig ",
+            "cfn-init -v -s ", { "Ref" : "AWS::StackName" }, " -r LaunchConfig ",
                 "    --access-key ",  { "Ref" : "CfnKeys" },
                 "    --secret-key ", {"Fn::GetAtt": ["CfnKeys", "SecretAccessKey"]},
                 "    --region ", { "Ref" : "AWS::Region" }, " || error_exit 'Failed to run cfn-init'\n",
@@ -234,9 +253,9 @@
                           "2>&1 || error_exit 'Failed to initialize host via chef client' \n",
 
             "# If all went well, signal success\n",
-            "CFN-INIT=`gzip --to-stdout /var/log/cfn-init.log | base64 -w 0`",
+            "CFNINIT=`/usr/bin/encode_log.py /var/log/cfn-init.log`\n",
             "cfn-signal -e $? ",
-                "--data  \"$CFN-INIT\" ",
+                "--data  \"$CFNINIT\" ",
                 "'", { "Ref" : "ChefBootstrapWaitHandle" }, "'\n"
           ]]}}
       }
@@ -249,12 +268,12 @@
       "DependsOn" : "LaunchConfig",
       "Properties" : {
         "Handle" : {"Ref" : "ChefBootstrapWaitHandle"},
-        "Timeout" : "1800"
+        "Timeout" : "91800"
       }
     }
   },
   "Outputs" : {
-      "cfn-init.log_as-gzip-base64" : {
+      "CfnInitLogAsGzipBase64" : {
           "Value" : { "Fn::GetAtt" : [ "WaitForInstance", "Data" ]},
           "Description" : "Server / chef bootstrap"
       }
