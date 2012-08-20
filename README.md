@@ -7,11 +7,19 @@ Millisecond clock accuracy is important for many applications, and especially fo
 
 Accuracy (especially in Windows and older Linux kernels) can be poor on virtualized hardware due to the 
 [necessary] CPU interruptions experienced by VM Guest OSes.  
-[This VMWare whitepaper](http://www.vmware.com/files/pdf/Timekeeping-In-VirtualMachines.pdf) discusses the underlying
+[This VMware whitepaper](http://www.vmware.com/files/pdf/Timekeeping-In-VirtualMachines.pdf) discusses the underlying
 technical reasons for this.
 
 This repository contains the results of research into how accurate EC2 instance clocks can be made when
 using NTP, and a description of the tools & research methodology used so that this research an be reproduced.
+
+### Status
+
+Currently available are respective infrastructure automation scripts to operate a cross region cluster of of Amazon EC2 machines 
+of differing sizes and OS, see the following links for further details:
+
+* [Infrastructure setup instructions](https://github.com/cityindex/ec2-clock-accuracy-research/tree/master/infrastructure#infrastructure-setup-instructions)
+* [Scripts for operating cross region AWS resources](https://github.com/cityindex/ec2-clock-accuracy-research/tree/master/infrastructure/scripts#scripts-for-operating-cross-region-research-resources)
 
 ## Challenges
 
