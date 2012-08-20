@@ -35,5 +35,4 @@ try:
     print "Account alias is '" + account.alias + "' with id " + account.id
 except boto.exception.BotoServerError, e:
     log.error(e.error_message)
-    # REVIEW: 13 denotes 'The data is invalid.' - in general it might be easier to go with just 1 for the use case at hand?
-    sys.exit(13 if platform.system() == 'Windows' else os.EX_DATAERR)
+    sys.exit(1)
