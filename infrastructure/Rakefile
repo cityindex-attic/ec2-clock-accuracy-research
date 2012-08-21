@@ -75,26 +75,31 @@ def wait_for_stack(stack_name)
 	print "Waiting for stack to initialise .."
 	stack_status = "CREATE_IN_PROGRESS"
 	stack_status_reason = ""
-	while stack_status == "CREATE_IN_PROGRESS"
-		print "."; sleep 15; print "."; sleep 15; print "."; sleep 15; print "."; sleep 15 # 4 . over 60 sec
+	result = ""
+	begin
+		while stack_status == "CREATE_IN_PROGRESS"
+			print "."; sleep 15; print "."; sleep 15; print "."; sleep 15; print "."; sleep 15 # 4 . over 60 sec
 
-		result = exec_python "scripts/describe-stacks.py -r eu-west-1 -s #{stack_name} --xml"
-		stacks =  Nokogiri::XML(result)
-		stack_status = stacks.xpath('//StackStatus').text
+			result = exec_python "scripts/describe-stacks.py -r eu-west-1 -s #{stack_name} --xml"
+			stacks =  Nokogiri::XML(result)
+			stack_status = stacks.xpath('//StackStatus').text
+		end
+
 		stack_status_reason = stacks.xpath('//StackStatusReason').text	
-		stack_init_log = stacks.xpath('//CfnInitLogAsGzipBase64').text	
+		stack_init_log = JSON.parse(stacks.xpath('//OutputValue').text)
+
+		puts "\n=========================================="
+		puts "cfn-init.log for #{stack_init_log.keys[0]}"
+		puts "=========================================="
+		puts exec_python "scripts/decode-logs.py #{stack_init_log.values[0]}"
+	rescue
+		puts result
+	ensure
+		if (stack_status != "CREATE_COMPLETE") then
+			fail("Stack creation failed: #{stack_status} - #{stack_status_reason}") 
+		else
+			puts stack_status
+			puts "Stack created successfully"
+		end
 	end
-
-	stack_status_reason = stacks.xpath('//StackStatusReason').text	
-	stack_init_log = JSON.parse(stacks.xpath('//OutputValue').text)
-
-	puts "\n=========================================="
-	puts "cfn-init.log for #{stack_init_log.keys[0]}"
-	puts "=========================================="
-	puts exec_python "scripts/decode-logs.py #{stack_init_log.values[0]}"
-
-	fail("Stack creation failed: #{stack_status} - #{stack_status_reason}") if (stack_status != "CREATE_COMPLETE")
-	
-	puts stack_status
-	puts "Stack created successfully"
 end
