@@ -21,6 +21,11 @@
        "Type" : "String",
        "Default" : "_default"
     },
+    "WaitForInstanceTimeoutInSec" : {
+       "Description" : "Number of seconds to wait for instance configuration to complete before rolling back",
+       "Type" : "Number",
+       "Default" : "1800"
+    },
     "InstanceType" : {
       "Description" : "EC2 instance type to provision.",
       "Type" : "String",
@@ -185,9 +190,9 @@
                   },
                   "/etc/chef/first-boot.json" : {
                       "content" : { "Fn::Join" : ["", [
-                        "{                      \n",
-                        "   \"run_list\": []    \n",
-                        "}                      \n"
+                        "{                                      \n",
+                        "   \"run_list\": [ \"role[base]\"]     \n",
+                        "}                                      \n"
                       ]]},
                       "encoding": "plain",
                       "mode"  : "000644",
@@ -254,8 +259,7 @@
 
             "# If all went well, signal success\n",
             "CFNINIT=`/usr/bin/encode_log.py /var/log/cfn-init.log`\n",
-            "cfn-signal -e $? ",
-                "--data  \"$CFNINIT\" ",
+            "cfn-signal --data  \"$CFNINIT\" ",
                 "'", { "Ref" : "ChefBootstrapWaitHandle" }, "'\n"
           ]]}}
       }
@@ -267,8 +271,8 @@
       "Type" : "AWS::CloudFormation::WaitCondition",
       "DependsOn" : "LaunchConfig",
       "Properties" : {
-        "Handle" : {"Ref" : "ChefBootstrapWaitHandle"},
-        "Timeout" : "1800"
+        "Handle" : { "Ref" : "ChefBootstrapWaitHandle" },
+        "Timeout" : { "Ref" : "WaitForInstanceTimeoutInSec" }
       }
     }
   },
