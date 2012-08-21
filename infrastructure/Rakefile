@@ -48,7 +48,7 @@ def launch_stack(stack_name, template)
 	puts "[WARNING] This takes about 30 min to run, and will start & stop real EC2 instances"
 
 	puts "Validating template: #{template}"
-	puts exec_python "/scripts/validate-template.py #{template}"
+	puts exec_python "scripts/validate-template.py #{template}"
 
 	puts "Launching Ubuntu cloud stack in eu-west-1 region named #{stack_name}"
 	puts exec_python "scripts/create-stacks.py #{stack_name} #{template} -p KeyName=labs-commander -p NotificationTopic=arn:aws:sns:{REGION}:{ACCOUNT}:as-labs-cityindex-com -p ChefConfigBucketName=cityindex.labs.chef_bootstrap -p ChefEnvironment=ec2-clock-accuracy-research_test -r eu-west --enable_iam"
