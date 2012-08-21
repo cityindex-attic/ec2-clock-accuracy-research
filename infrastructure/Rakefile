@@ -62,7 +62,7 @@ end
 def exec_python(cmd) 
 	is_windows = (RbConfig::CONFIG['host_os'] =~ /mswin|mingw|cygwin/)
 	if is_windows then 
-		cmd = "python #{cmd.gsub('/','\\\\')}" 
+		cmd = "python #{cmd}" 
 	else 
 		cmd = "./#{cmd}"
 	end
