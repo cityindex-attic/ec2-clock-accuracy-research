@@ -1,4 +1,4 @@
-# Scripts for operating cross region research resources
+# Scripts for operating cross region AWS resources
 
 This folder gathers various scripts used during cross region operations currently. 
 The goal is to provide a starting point for anyone who wants to reproduce this piece of research.
@@ -10,7 +10,7 @@ Python with boto or PowerShell with the AWS SDK for .NET for its AWS automation 
 
 The scripts are based on [Python 2.7](http://python.org/) and have the following dependencies:
 
-* A recent version of [boto](https://github.com/boto/boto) (tested agains 2.5.2), which provides the interface to Amazon Web Services
+* A recent version of [boto](https://github.com/boto/boto) (tested against 2.5.2), which provides the interface to Amazon Web Services
 
 ## Installation
 
@@ -31,6 +31,5 @@ AWS credentials are obviously required, which can provided via the command line 
 but are more easily served via environment variables or a configuration file for day to day usage, 
 see section [Getting Started with Boto](https://github.com/boto/boto#getting-started-with-boto) for details.
 
-* The `validate-credentials` script provides a convenience method to both validate the AWS credentails and 
+* The `validate-credentials` script provides a convenience method to both validate the AWS credentials and 
 display respective account/user information, which helps when juggling multiple AWS accounts.
-
