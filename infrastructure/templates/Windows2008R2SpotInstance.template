@@ -73,8 +73,7 @@
             "Effect":"Allow",
             "Action":[
               "cloudformation:DescribeStackResource",
-              "s3:Get*",
-              "s3:List*"
+              "s3:*"
             ],
             "Resource":"*"
           }]}
@@ -143,29 +142,45 @@
         "AWS::CloudFormation::Init" : { 
             "config" : {
               "files" : {
+                  "/etc/chef/s3.exe" : {
+                    "source": "http://s3.codeplex.com/downloads/get/128447"
+                  },
+                  "/etc/chef/ship_log_files_to_s3.cmd" : {
+                    "content" : { "Fn::Join" : ["", [
+                      "c:/etc/chef/s3.exe auth ",  
+                        "\"", { "Ref" : "CfnKeys" }, "\" ",
+                        "\"", { "Fn::GetAtt": ["CfnKeys", "SecretAccessKey"]}, "\" \n",
+                      "c:/etc/chef/s3.exe put ", { "Ref" : "ChefConfigBucketName" }, "/bootstrap-logs/", 
+                        { "Ref" : "AWS::StackName" }, "/%COMPUTERNAME%/ c:/cfn/log/cfn-init.log \n"
+                    ]]},
+                    "encoding": "plain"
+                  },
                   "/etc/chef/run_chef-client.cmd" : {
                     "content" : { "Fn::Join" : ["", [
                       "SET \"PATH=%PATH%;C:/opscode/chef/bin;C:/opscode/chef/embedded/bin\" \n",
                       "chef-client -c c:/etc/chef/client.rb -j c:/etc/chef/first-boot.json ",
                           " --environment ", { "Ref" : "ChefEnvironment" }, 
-                          " --logfile c:/etc/chef/chef-bootstrap.log \n"
+                          " --logfile c:/cfn/log/cfn-init.log \n",
+                      "c:/etc/chef/ship_log_files_to_s3.cmd \n"
                     ]]},
                     "encoding": "plain"
                   },
                   "/etc/chef/add_bootstrap_user.cmd" : {
                     "content" : { "Fn::Join" : ["", [
-                        "net user bootstrapper BootMeBaby123 /add\n",
-                        "net localgroup administrators bootstrapper /add\n"
+                      "net user bootstrapper BootMeBaby123 /add\n",
+                      "net localgroup administrators bootstrapper /add\n",
+                      "c:/etc/chef/ship_log_files_to_s3.cmd \n"
                     ]]},
                     "encoding": "plain"
                   },
                   "/etc/chef/enable_winrm.cmd" : {
                     "content" : { "Fn::Join" : ["", [
-                        "winrm quickconfig -q\n",
-                        "winrm set winrm/config/winrs @{MaxMemoryPerShellMB=\"300\"}\n",
-                        "winrm set winrm/config @{MaxTimeoutms=\"1800000\"}\n",
-                        "winrm set winrm/config/service @{AllowUnencrypted=\"true\"}\n",
-                        "winrm set winrm/config/service/auth @{Basic=\"true\"}\n"
+                      "winrm quickconfig -q\n",
+                      "winrm set winrm/config/winrs @{MaxMemoryPerShellMB=\"300\"}\n",
+                      "winrm set winrm/config @{MaxTimeoutms=\"1800000\"}\n",
+                      "winrm set winrm/config/service @{AllowUnencrypted=\"true\"}\n",
+                      "winrm set winrm/config/service/auth @{Basic=\"true\"}\n",
+                      "c:/etc/chef/ship_log_files_to_s3.cmd \n"
                     ]]},
                     "encoding": "plain"
                   },
