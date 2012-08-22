@@ -15,20 +15,22 @@ STDOUT.sync = true
 #  Tasks  #
 ###########
 
-desc "Launch new Windows EC2 instances to run integration tests"
-task :integration_test_windows do
-	stack_name = "Windows2008R2SpotInstance-test-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
-	template = "./templates/Windows2008R2SpotInstance.template"
+namespace :integration_test do
+	desc "Launch new Windows EC2 instances to run integration tests"
+	task :windows do
+		stack_name = "Windows2008R2SpotInstance-test-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
+		template = "./templates/Windows2008R2SpotInstance.template"
 
-	launch_stack(stack_name, template)
-end
+		launch_stack(stack_name, template, { :timeout => 7200, :disable_rollback => true })
+	end
 
-desc "Launch new Ubuntu EC2 instances to run integration tests"
-task :integration_test_ubuntu do
-	stack_name = "Ubuntu1204SpotInstance-test-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
-	template = "templates/Ubuntu1204SpotInstance.template"
+	desc "Launch new Ubuntu EC2 instances to run integration tests"
+	task :ubuntu do
+		stack_name = "Ubuntu1204SpotInstance-test-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
+		template = "templates/Ubuntu1204SpotInstance.template"
 
-	launch_stack(stack_name, template)
+		launch_stack(stack_name, template)
+	end
 end
 
 desc "Initialise / update chef cookbooks as defined in ./Cheffile"
@@ -38,20 +40,37 @@ task :update_chef_repo do
 	puts `librarian-chef show` 
 end
 
-task :default => 'integration_test_ubuntu'
+task :default => 'integration_test:ubuntu'
 
 ###########
 # Helpers #
 ###########
 
-def launch_stack(stack_name, template)
+def launch_stack(stack_name, template, options = {})
+	options[:timeout] 					||= 1800
+	options[:chef_environment] 			||= "ec2-clock-accuracy-research_test"
+	options[:key_name] 					||= "labs-commander"
+	options[:notification_topic] 		||= "arn:aws:sns:{REGION}:{ACCOUNT}:as-labs-cityindex-com"
+	options[:chef_config_bucket_name] 	||= "cityindex.labs.chef_bootstrap"
+	options[:region_filter] 			||= "eu-west"
+	options[:disable_rollback] 			||= "false"
+
 	puts "[WARNING] This takes about 30 min to run, and will start & stop real EC2 instances"
 
 	puts "Validating template: #{template}"
 	puts exec_python "scripts/validate-template.py #{template}"
 
+	disable_rollback = ""
+	disable_rollback = "--disable_rollback" if options[:disable_rollback] 
+
 	puts "Launching Ubuntu cloud stack in eu-west-1 region named #{stack_name}"
-	puts exec_python "scripts/create-stacks.py #{stack_name} #{template} -p KeyName=labs-commander -p NotificationTopic=arn:aws:sns:{REGION}:{ACCOUNT}:as-labs-cityindex-com -p ChefConfigBucketName=cityindex.labs.chef_bootstrap -p ChefEnvironment=ec2-clock-accuracy-research_test -r eu-west --enable_iam"
+	cmd = <<EOS.gsub(/\s+/, " ").strip
+	 	scripts/create-stacks.py #{stack_name} #{template} --enable_iam -r #{options[:region_filter]} #{disable_rollback} 
+		-p KeyName=#{options[:key_name]} -p NotificationTopic=#{options[:notification_topic]} 
+		-p ChefConfigBucketName=#{options[:chef_config_bucket_name]} -p ChefEnvironment=#{options[:chef_environment]} 
+		-p WaitForInstanceTimeoutInSec=#{options[:timeout]} 
+EOS
+	puts exec_python cmd
 
 	wait_for_stack(stack_name)
 

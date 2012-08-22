@@ -3,8 +3,9 @@
 
 site 'http://community.opscode.com/api/v1'
 
-cookbook 'chef-user',
-  :git => 'https://github.com/mrdavidlaing/chef-user'
+cookbook 'user',
+  :git => 'https://github.com/mrdavidlaing/chef-user',
+  :ref => 'add-group-docs'
 
 # cookbook 'chef-client'
 

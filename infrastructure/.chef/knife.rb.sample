@@ -7,18 +7,22 @@ validation_client_name   "chef-validator"
 validation_key           "#{current_dir}/validator.pem"
 
 chef_server_url          "http://chef.labs.cityindex.com"
+environment 			 "ec2-clock-accuracy-research_test"
 
 knife[:region] 			 	  	= "eu-west-1"
 knife[:aws_ssh_key_id] 	 	  	= "{your_key_name}"
 
 #You probably don't need to change these
 
-log_level                :info
+log_level                :debug
 log_location             STDOUT
 
-log_level                :info
-log_location             STDOUT
 cookbook_path            ["#{current_dir}/../cookbooks"]
+cache_options      		 ({ :path => "#{current_dir}/../tmp/cache/checksums", :skip_expires => true })
+sandbox_path       		  "#{current_dir}/../sandboxes"
+data_bag_path 			  "#{current_dir}/../data_bags"
+file_cache_path			  "#{current_dir}/../tmp/cache"
+file_backup_path		  "#{current_dir}/../tmp/backup"
 encrypted_data_bag_secret "#{current_dir}/encrypted_data_bag_secret"
 
 knife[:aws_access_key_id] 		= "#{ENV['AWS_ACCESS_KEY_ID']}"
