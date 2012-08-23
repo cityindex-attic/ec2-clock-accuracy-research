@@ -13,7 +13,7 @@ from pprint import pprint
 # configure command line argument parsing
 parser = argparse.ArgumentParser(description='Dump the contents of files in a bucket to STDOUT across all/some available S3 regions')
 parser.add_argument("bucket", help="A bucket name")
-parser.add_argument("-f", "--folder", default="", help="The bucket subfolder")
+parser.add_argument("-p", "--prefix", default="", help="The prefix of the file in the bucket (similar to a subfolder)")
 parser.add_argument("-r", "--region", default="us-east-1", help="A region substring selector (e.g. 'us-west')")
 parser.add_argument("--access_key_id", dest='aws_access_key_id', help="Your AWS Access Key ID")
 parser.add_argument("--secret_access_key", dest='aws_secret_access_key', help="Your AWS Secret Access Key")
@@ -43,7 +43,7 @@ for location in locations:
     pprint(region, indent=2)
     try:
     	bucket = s3.get_bucket(args.bucket)
-    	for logfile in bucket.list(args.folder):
+    	for logfile in bucket.list(args.prefix):
     		print "---------------------------------------------------------"
     		print "Filename: " + logfile.name
     		print "---------------------------------------------------------"

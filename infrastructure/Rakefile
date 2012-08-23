@@ -21,7 +21,7 @@ namespace :integration_test do
 		stack_name = "Windows2008R2SpotInstance-test-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
 		template = "./templates/Windows2008R2SpotInstance.template"
 
-		launch_stack(stack_name, template, { :timeout => 7200, :disable_rollback => true })
+		launch_stack(stack_name, template, { :disable_rollback => true })
 	end
 
 	desc "Launch new Ubuntu EC2 instances to run integration tests"
@@ -29,7 +29,7 @@ namespace :integration_test do
 		stack_name = "Ubuntu1204SpotInstance-test-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
 		template = "templates/Ubuntu1204SpotInstance.template"
 
-		launch_stack(stack_name, template, { :timeout => 7200, :disable_rollback => true })
+		launch_stack(stack_name, template, { :disable_rollback => true })
 	end
 end
 
@@ -109,7 +109,7 @@ def wait_for_stack(stack_name, options = {})
 		puts "\n=========================================="
 		puts "                 Logs"
 		puts "=========================================="
-		puts exec_python "scripts/read-buckets.py --folder bootstrap-logs-eu-west-1/#{stack_name} #{options[:chef_config_bucket_name]}"
+		puts exec_python "scripts/read-buckets.py --prefix bootstrap-logs-eu-west-1/#{stack_name} #{options[:chef_config_bucket_name]}"
 	rescue
 		puts result
 	ensure
