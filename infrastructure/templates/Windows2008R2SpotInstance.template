@@ -152,12 +152,13 @@
                   },
                   "/etc/chef/ship_log_files_to_s3.cmd" : {
                     "content" : { "Fn::Join" : ["", [
-                      "c:/etc/chef/s3.exe auth ",  
+                      "copy /Y c:\\cfn\\log\\cfn-init.log c:\\cfn\\log\\cfn-init.log.txt \n",
+                      "c:\\etc\\chef\\s3.exe auth ",  
                         "\"", { "Ref" : "CfnKeys" }, "\" ",
                         "\"", { "Fn::GetAtt": ["CfnKeys", "SecretAccessKey"]}, "\" /nogui \n",
-                      "c:/etc/chef/s3.exe put ", { "Ref" : "ChefConfigBucketName" }, 
+                      "c:\\etc\\chef\\s3.exe put ", { "Ref" : "ChefConfigBucketName" }, 
                         "/bootstrap-logs-", { "Ref" : "AWS::Region" }, "/", 
-                        { "Ref" : "AWS::StackName" }, "/%COMPUTERNAME%/ c:\\cfn\\log\\cfn-init.log /nogui \n"
+                        { "Ref" : "AWS::StackName" }, "/%COMPUTERNAME%/ c:\\cfn\\log\\*.log.txt /nogui \n"
                     ]]},
                     "encoding": "plain"
                   },
@@ -166,16 +167,14 @@
                       "SET \"PATH=%PATH%;C:/opscode/chef/bin;C:/opscode/chef/embedded/bin\" \n",
                       "chef-client -c c:/etc/chef/client.rb -j c:/etc/chef/first-boot.json ",
                           " --environment ", { "Ref" : "ChefEnvironment" }, 
-                          " --logfile c:/cfn/log/cfn-init.log \n",
-                      "c:/etc/chef/ship_log_files_to_s3.cmd \n"
+                          " --logfile c:/cfn/log/chef-init.log.txt \n"
                     ]]},
                     "encoding": "plain"
                   },
                   "/etc/chef/add_bootstrap_user.cmd" : {
                     "content" : { "Fn::Join" : ["", [
                       "net user bootstrapper BootMeBaby123 /add\n",
-                      "net localgroup administrators bootstrapper /add\n",
-                      "c:/etc/chef/ship_log_files_to_s3.cmd \n"
+                      "net localgroup administrators bootstrapper /add\n"
                     ]]},
                     "encoding": "plain"
                   },
@@ -185,8 +184,7 @@
                       "winrm set winrm/config/winrs @{MaxMemoryPerShellMB=\"300\"}\n",
                       "winrm set winrm/config @{MaxTimeoutms=\"1800000\"}\n",
                       "winrm set winrm/config/service @{AllowUnencrypted=\"true\"}\n",
-                      "winrm set winrm/config/service/auth @{Basic=\"true\"}\n",
-                      "c:/etc/chef/ship_log_files_to_s3.cmd \n"
+                      "winrm set winrm/config/service/auth @{Basic=\"true\"}\n"
                     ]]},
                     "encoding": "plain"
                   },
@@ -246,6 +244,7 @@
                 "    --secret-key ", {"Fn::GetAtt": ["CfnKeys", "SecretAccessKey"]},
                 "    --region ", { "Ref" : "AWS::Region" }, "\n",
             "cfn-signal.exe -e %ERRORLEVEL% ", { "Fn::Base64" : { "Ref" : "ChefBootstrapWaitHandle" }}, "\n",
+            "c:\\etc\\chef\\ship_log_files_to_s3.cmd \n",
             "</script>"
           ]]}}
       }

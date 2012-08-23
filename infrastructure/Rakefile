@@ -29,7 +29,7 @@ namespace :integration_test do
 		stack_name = "Ubuntu1204SpotInstance-test-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
 		template = "templates/Ubuntu1204SpotInstance.template"
 
-		launch_stack(stack_name, template)
+		launch_stack(stack_name, template, { :timeout => 7200, :disable_rollback => true })
 	end
 end
 
@@ -72,7 +72,7 @@ def launch_stack(stack_name, template, options = {})
 EOS
 	puts exec_python cmd
 
-	wait_for_stack(stack_name)
+	wait_for_stack(stack_name, options)
 
 	puts "Deleting stack #{stack_name}"
 	puts exec_python "scripts/delete-stacks.py #{stack_name} -r eu-west"
@@ -90,7 +90,9 @@ def exec_python(cmd)
 	out
 end
 
-def wait_for_stack(stack_name)
+def wait_for_stack(stack_name, options = {})
+	options[:chef_config_bucket_name] 	||= "cityindex.labs.chef_bootstrap"
+
 	print "Waiting for stack to initialise .."
 	stack_status = "CREATE_IN_PROGRESS"
 	stack_status_reason = ""
@@ -104,13 +106,10 @@ def wait_for_stack(stack_name)
 			stack_status = stacks.xpath('//StackStatus').text
 		end
 
-		stack_status_reason = stacks.xpath('//StackStatusReason').text	
-		stack_init_log = JSON.parse(stacks.xpath('//OutputValue').text)
-
 		puts "\n=========================================="
-		puts "cfn-init.log for #{stack_init_log.keys[0]}"
+		puts "                 Logs"
 		puts "=========================================="
-		puts exec_python "scripts/decode-logs.py #{stack_init_log.values[0]}"
+		puts exec_python "scripts/read-buckets.py --folder bootstrap-logs-eu-west-1/#{stack_name} #{options[:chef_config_bucket_name]}"
 	rescue
 		puts result
 	ensure
