@@ -15,20 +15,22 @@ STDOUT.sync = true
 #  Tasks  #
 ###########
 
-desc "Launch new Windows EC2 instances to run integration tests"
-task :integration_test_windows do
-	stack_name = "Windows2008R2SpotInstance-test-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
-	template = "./templates/Windows2008R2SpotInstance.template"
+namespace :integration_test do
+	desc "Launch new Windows EC2 instances to run integration tests"
+	task :windows do
+		stack_name = "Windows2008R2SpotInstance-test-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
+		template = "./templates/Windows2008R2SpotInstance.template"
 
-	launch_stack(stack_name, template)
-end
+		launch_stack(stack_name, template, { :disable_rollback => true })
+	end
 
-desc "Launch new Ubuntu EC2 instances to run integration tests"
-task :integration_test_ubuntu do
-	stack_name = "Ubuntu1204SpotInstance-test-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
-	template = "templates/Ubuntu1204SpotInstance.template"
+	desc "Launch new Ubuntu EC2 instances to run integration tests"
+	task :ubuntu do
+		stack_name = "Ubuntu1204SpotInstance-test-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
+		template = "templates/Ubuntu1204SpotInstance.template"
 
-	launch_stack(stack_name, template)
+		launch_stack(stack_name, template, { :disable_rollback => true })
+	end
 end
 
 desc "Initialise / update chef cookbooks as defined in ./Cheffile"
@@ -38,22 +40,39 @@ task :update_chef_repo do
 	puts `librarian-chef show` 
 end
 
-task :default => 'integration_test_ubuntu'
+task :default => 'integration_test:ubuntu'
 
 ###########
 # Helpers #
 ###########
 
-def launch_stack(stack_name, template)
+def launch_stack(stack_name, template, options = {})
+	options[:timeout] 					||= 1800
+	options[:chef_environment] 			||= "ec2-clock-accuracy-research_test"
+	options[:key_name] 					||= "labs-commander"
+	options[:notification_topic] 		||= "arn:aws:sns:{REGION}:{ACCOUNT}:as-labs-cityindex-com"
+	options[:chef_config_bucket_name] 	||= "cityindex.labs.chef_bootstrap"
+	options[:region_filter] 			||= "eu-west"
+	options[:disable_rollback] 			||= "false"
+
 	puts "[WARNING] This takes about 30 min to run, and will start & stop real EC2 instances"
 
 	puts "Validating template: #{template}"
 	puts exec_python "scripts/validate-template.py #{template}"
 
-	puts "Launching Ubuntu cloud stack in eu-west-1 region named #{stack_name}"
-	puts exec_python "scripts/create-stacks.py #{stack_name} #{template} -p KeyName=labs-commander -p NotificationTopic=arn:aws:sns:{REGION}:{ACCOUNT}:as-labs-cityindex-com -p ChefConfigBucketName=cityindex.labs.chef_bootstrap -p ChefEnvironment=ec2-clock-accuracy-research_test -r eu-west --enable_iam"
+	disable_rollback = ""
+	disable_rollback = "--disable_rollback" if options[:disable_rollback] 
 
-	wait_for_stack(stack_name)
+	puts "Launching Ubuntu cloud stack in eu-west-1 region named #{stack_name}"
+	cmd = <<EOS.gsub(/\s+/, " ").strip
+	 	scripts/create-stacks.py #{stack_name} #{template} --enable_iam -r #{options[:region_filter]} #{disable_rollback} 
+		-p KeyName=#{options[:key_name]} -p NotificationTopic=#{options[:notification_topic]} 
+		-p ChefConfigBucketName=#{options[:chef_config_bucket_name]} -p ChefEnvironment=#{options[:chef_environment]} 
+		-p WaitForInstanceTimeoutInSec=#{options[:timeout]} 
+EOS
+	puts exec_python cmd
+
+	wait_for_stack(stack_name, options)
 
 	puts "Deleting stack #{stack_name}"
 	puts exec_python "scripts/delete-stacks.py #{stack_name} -r eu-west"
@@ -71,30 +90,34 @@ def exec_python(cmd)
 	out
 end
 
-def wait_for_stack(stack_name)
+def wait_for_stack(stack_name, options = {})
+	options[:chef_config_bucket_name] 	||= "cityindex.labs.chef_bootstrap"
+
 	print "Waiting for stack to initialise .."
 	stack_status = "CREATE_IN_PROGRESS"
 	stack_status_reason = ""
-	while stack_status == "CREATE_IN_PROGRESS"
-		print "."; sleep 15; print "."; sleep 15; print "."; sleep 15; print "."; sleep 15 # 4 . over 60 sec
+	result = ""
+	begin
+		while stack_status == "CREATE_IN_PROGRESS"
+			print "."; sleep 15; print "."; sleep 15; print "."; sleep 15; print "."; sleep 15 # 4 . over 60 sec
 
-		result = exec_python "scripts/describe-stacks.py -r eu-west-1 -s #{stack_name} --xml"
-		stacks =  Nokogiri::XML(result)
-		stack_status = stacks.xpath('//StackStatus').text
-		stack_status_reason = stacks.xpath('//StackStatusReason').text	
-		stack_init_log = stacks.xpath('//CfnInitLogAsGzipBase64').text	
+			result = exec_python "scripts/describe-stacks.py -r eu-west-1 -s #{stack_name} --xml"
+			stacks =  Nokogiri::XML(result)
+			stack_status = stacks.xpath('//StackStatus').text
+		end
+
+		puts "\n=========================================="
+		puts "                 Logs"
+		puts "=========================================="
+		puts exec_python "scripts/read-buckets.py --prefix bootstrap-logs-eu-west-1/#{stack_name} #{options[:chef_config_bucket_name]}"
+	rescue
+		puts result
+	ensure
+		if (stack_status != "CREATE_COMPLETE") then
+			fail("Stack creation failed: #{stack_status} - #{stack_status_reason}") 
+		else
+			puts stack_status
+			puts "Stack created successfully"
+		end
 	end
-
-	stack_status_reason = stacks.xpath('//StackStatusReason').text	
-	stack_init_log = JSON.parse(stacks.xpath('//OutputValue').text)
-
-	puts "\n=========================================="
-	puts "cfn-init.log for #{stack_init_log.keys[0]}"
-	puts "=========================================="
-	puts exec_python "scripts/decode-logs.py #{stack_init_log.values[0]}"
-
-	fail("Stack creation failed: #{stack_status} - #{stack_status_reason}") if (stack_status != "CREATE_COMPLETE")
-	
-	puts stack_status
-	puts "Stack created successfully"
 end

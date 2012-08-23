@@ -1,10 +1,10 @@
 GIT
   remote: https://github.com/mrdavidlaing/chef-user
-  ref: master
-  sha: 57522be125f3a5ca60672b45caaba07fff1c2fea
+  ref: add-group-docs
+  sha: 404ce8deb43966481da8b3f106d3d8ad10d38801
   specs:
-    chef-user (0.3.0)
+    user (0.3.0)
 
 DEPENDENCIES
-  chef-user (>= 0)
+  user (>= 0)
 
