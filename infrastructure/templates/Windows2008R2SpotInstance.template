@@ -21,6 +21,11 @@
        "Type" : "String",
        "Default" : "_default"
     },
+    "WaitForInstanceTimeoutInSec" : {
+       "Description" : "Number of seconds to wait for instance configuration to complete before rolling back",
+       "Type" : "Number",
+       "Default" : "1800"
+    },
     "InstanceType" : {
       "Description" : "EC2 instance type to provision.",
       "Type" : "String",
@@ -143,15 +148,16 @@
             "config" : {
               "files" : {
                   "/etc/chef/s3.exe" : {
-                    "source": "http://s3.codeplex.com/downloads/get/128447"
+                    "source": "http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=s3&DownloadId=128447&FileTime=129216634530670000&Build=19280"
                   },
                   "/etc/chef/ship_log_files_to_s3.cmd" : {
                     "content" : { "Fn::Join" : ["", [
                       "c:/etc/chef/s3.exe auth ",  
                         "\"", { "Ref" : "CfnKeys" }, "\" ",
-                        "\"", { "Fn::GetAtt": ["CfnKeys", "SecretAccessKey"]}, "\" \n",
-                      "c:/etc/chef/s3.exe put ", { "Ref" : "ChefConfigBucketName" }, "/bootstrap-logs/", 
-                        { "Ref" : "AWS::StackName" }, "/%COMPUTERNAME%/ c:/cfn/log/cfn-init.log \n"
+                        "\"", { "Fn::GetAtt": ["CfnKeys", "SecretAccessKey"]}, "\" /nogui \n",
+                      "c:/etc/chef/s3.exe put ", { "Ref" : "ChefConfigBucketName" }, 
+                        "/bootstrap-logs-", { "Ref" : "AWS::Region" }, "/", 
+                        { "Ref" : "AWS::StackName" }, "/%COMPUTERNAME%/ c:\\cfn\\log\\cfn-init.log /nogui \n"
                     ]]},
                     "encoding": "plain"
                   },
@@ -251,8 +257,8 @@
       "Type" : "AWS::CloudFormation::WaitCondition",
       "DependsOn" : "LaunchConfig",
       "Properties" : {
-        "Handle" : {"Ref" : "ChefBootstrapWaitHandle"},
-        "Timeout" : "1800"
+        "Handle" : { "Ref" : "ChefBootstrapWaitHandle" },
+        "Timeout" : { "Ref" : "WaitForInstanceTimeoutInSec" }
       }
     }
   }
