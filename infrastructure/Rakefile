@@ -4,12 +4,11 @@ require 'json'
 require 'rubygems'
 require 'chef'
 require 'rbconfig'
-
-# Load common, useful tasks from Chef.
-TOPDIR = File.expand_path(File.join(File.dirname(__FILE__), ".."))
-load 'chef/tasks/chef_repo.rake'
+require 'pty'
 
 STDOUT.sync = true
+
+task :default => [ 'test_cookbooks', 'foodcritic' ]
 
 ###########
 #  Tasks  #
@@ -33,14 +32,34 @@ namespace :integration_test do
 	end
 end
 
-desc "Initialise / update chef cookbooks as defined in ./Cheffile"
-task :update_chef_repo do
-	puts "Initializing chef repo using ./Cheffile"
-	puts `librarian-chef update` 
-	puts `librarian-chef show` 
+desc "Depreciated -> use build_cookbooks instead"
+task :update_chef_repo => [:build_cookbooks] do
 end
 
-task :default => 'integration_test:ubuntu'
+desc "Copy all chef defined in ./Cheffile into /cookbooks ready for chef run"
+task :build_cookbooks do
+	puts "Building cookbooks using ./Cheffile ...."
+	pty_exec "librarian-chef update" 
+	puts "cookbooks/ contains:"
+	puts "--------------------"
+	pty_exec "librarian-chef show" 
+end
+
+desc "Test all cookbooks in cookbooks-overrides/ or cookbooks-sources/"
+task :test_cookbooks => :build_cookbooks do
+  puts "Running knife cookbook test for all cookbooks in cookbooks-overrides/ or cookbooks-sources/"
+  pty_exec "knife cookbook test user newrelic"
+end
+
+desc "Runs foodcritic linter"
+task :foodcritic do
+	puts "Running foodcritic ..."
+  if Gem::Version.new("1.9.2") <= Gem::Version.new(RUBY_VERSION.dup)
+    exec "foodcritic -f any -f ~FC005 cookbooks-sources cookbooks-overrides"
+  else
+    puts "WARN: foodcritic run is skipped as Ruby #{RUBY_VERSION} is < 1.9.2."
+  end
+end
 
 ###########
 # Helpers #
@@ -76,6 +95,17 @@ EOS
 
 	puts "Deleting stack #{stack_name}"
 	puts exec_python "scripts/delete-stacks.py #{stack_name} -r eu-west"
+end
+
+def pty_exec(cmd)
+  PTY.spawn( cmd ) do |stdin, stdout, pid|
+    begin
+      stdin.each { |line| print line }
+    rescue Errno::EIO
+    end
+  end
+rescue PTY::ChildExited
+  puts "#{cmd} - child process exited!"
 end
 
 def exec_python(cmd) 

@@ -1,3 +1,26 @@
+SITE
+  remote: http://community.opscode.com/api/v1
+  specs:
+    apache2 (1.1.12)
+    build-essential (1.1.0)
+    mysql (1.3.0)
+      build-essential (>= 0.0.0)
+      openssl (>= 0.0.0)
+    newrelic (0.3.6)
+      apache2 (>= 0.0.0)
+      php (>= 0.0.0)
+      python (>= 0.0.0)
+    openssl (1.0.0)
+    php (1.0.2)
+      build-essential (>= 0.0.0)
+      mysql (>= 0.0.0)
+      xml (>= 0.0.0)
+    python (1.0.8)
+      build-essential (>= 0.0.0)
+      yum (>= 0.0.0)
+    xml (1.0.4)
+    yum (0.8.0)
+
 GIT
   remote: https://github.com/mrdavidlaing/chef-user
   ref: add-group-docs
@@ -6,5 +29,6 @@ GIT
     user (0.3.0)
 
 DEPENDENCIES
+  newrelic (>= 0.3.6)
   user (>= 0)
 

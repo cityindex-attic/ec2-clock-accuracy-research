@@ -1,11 +1,49 @@
 #!/usr/bin/env ruby
 #^syntax detection
 
+#######################
+# Community cookbooks #
+#######################
 site 'http://community.opscode.com/api/v1'
+
+cookbook 'newrelic', '>= 0.3.6' 
+
+##################################################
+# Community cookbooks with pending pull requests #
+##################################################
 
 cookbook 'user',
   :git => 'https://github.com/mrdavidlaing/chef-user',
   :ref => 'add-group-docs'
+
+####################
+# Custom cookbooks #
+####################
+
+#cookbook 'apache2-mpm-itk', 	:path => 'cookbooks-sources'
+
+
+###########
+# Samples #
+###########
+
+#cookbook 'user',
+#  :git => 'https://github.com/mrdavidlaing/chef-user',
+#  :ref => 'add-group-docs'
+
+# cookbook 'rvm',
+#   :git => 'https://github.com/fnichol/chef-rvm'
+
+# cookbook 'postgresql',
+#   :git => 'https://github.com/findsyou/cookbooks',
+#   :ref => 'postgresql-improvements'
+
+#!/usr/bin/env ruby
+#^syntax detection
+
+site 'http://community.opscode.com/api/v1'
+
+
 
 # cookbook 'chef-client'
 
