@@ -97,6 +97,7 @@ end
 def launch_stack(stack_name, template, options = {})
 	options[:timeout] 					||= 1800
 	options[:chef_environment] 			||= "ec2-clock-accuracy-research_test"
+	options[:chef_server] 				||= "http://chef.labs.cityindex.com"
 	options[:key_name] 					||= "labs-commander"
 	options[:notification_topic] 		||= "arn:aws:sns:{REGION}:{ACCOUNT}:as-labs-cityindex-com"
 	options[:chef_config_bucket_name] 	||= "cityindex.labs.chef_bootstrap"
@@ -114,7 +115,7 @@ def launch_stack(stack_name, template, options = {})
 	 	scripts/create-stacks.py #{stack_name} #{template} --enable_iam -r #{options[:region_filter]} #{disable_rollback} 
 		-p KeyName=#{options[:key_name]} -p NotificationTopic=#{options[:notification_topic]} 
 		-p ChefConfigBucketName=#{options[:chef_config_bucket_name]} -p ChefEnvironment=#{options[:chef_environment]} 
-		-p WaitForInstanceTimeoutInSec=#{options[:timeout]} 
+		-p ChefServer=#{options[:chef_server]} -p WaitForInstanceTimeoutInSec=#{options[:timeout]} 
 EOS
 	puts exec_python cmd
 
