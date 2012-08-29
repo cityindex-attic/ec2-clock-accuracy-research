@@ -3,6 +3,7 @@ SITE
   specs:
     apache2 (1.1.12)
     build-essential (1.1.0)
+    chef_handler (1.0.6)
     mysql (1.3.0)
       build-essential (>= 0.0.0)
       openssl (>= 0.0.0)
@@ -18,6 +19,9 @@ SITE
     python (1.0.8)
       build-essential (>= 0.0.0)
       yum (>= 0.0.0)
+    sudo (1.1.0)
+    windows (1.3.4)
+      chef_handler (>= 0.0.0)
     xml (1.0.4)
     yum (0.8.0)
 
@@ -33,9 +37,11 @@ PATH
   specs:
     base (0.0.1)
       user (>= 0.0.0)
+      windows (>= 0.0.0)
 
 DEPENDENCIES
   base (>= 0)
   newrelic (>= 0.3.6)
+  sudo (>= 1.1.0)
   user (>= 0)
 
