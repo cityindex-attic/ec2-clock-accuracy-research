@@ -10,4 +10,4 @@
 
 node['users'] = ['mrdavidlaing', 'sopel']
 
-recipe "user::data_bag"
+include_recipe "user::data_bag"
