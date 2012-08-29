@@ -35,7 +35,8 @@ GIT
 PATH
   remote: cookbooks-sources
   specs:
-    base (0.0.1)
+    base (0.0.5)
+      sudo (>= 0.0.0)
       user (>= 0.0.0)
       windows (>= 0.0.0)
 

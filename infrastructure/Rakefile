@@ -75,7 +75,7 @@ task :build_cookbooks do
 end
 
 desc "Test all cookbooks in cookbooks-overrides/ or cookbooks-sources/"
-task :test_cookbooks => :build_cookbooks do
+task :test_cookbooks do
   puts "Running knife cookbook test for all cookbooks in cookbooks-overrides/ or cookbooks-sources/"
   pty_exec "knife cookbook test base "
 end
