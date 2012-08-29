@@ -14,13 +14,40 @@ task :default => [ 'test_cookbooks', 'foodcritic' ]
 #  Tasks  #
 ###########
 
+namespace :launch_stack do
+	desc "Launch new Windows EC2 instances"
+	task :windows do
+		stack_name = "Windows2008R2SpotInstance-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
+		template = "./templates/Windows2008R2SpotInstance.template"
+
+		launch_stack(stack_name, template, { :disable_rollback => true })
+	end
+
+	desc "Launch new Ubuntu EC2 instances"
+	task :ubuntu do
+		stack_name = "Ubuntu1204SpotInstance-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
+		template = "templates/Ubuntu1204SpotInstance.template"
+
+		launch_stack(stack_name, template, { :disable_rollback => true })
+	end
+
+	desc "Runs chef across all stack instances"
+	task "re_converge" do
+		puts "TODO - automate this.  Requires knife search to work"
+		puts "knife cookbook metadata --all && knife cookbook upload --all"
+		puts "knife winrm 79.125.70.159 \"chef-client -c c:/etc/chef/client.rb -o 'recipe[base]' -l info\" -m -x bootstrapper -P 'BootMeBaby123'"
+	end
+end
+
 namespace :integration_test do
 	desc "Launch new Windows EC2 instances to run integration tests"
 	task :windows do
 		stack_name = "Windows2008R2SpotInstance-test-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
 		template = "./templates/Windows2008R2SpotInstance.template"
 
+		puts "[WARNING] This takes about 30 min to run, and will start & stop real EC2 instances"
 		launch_stack(stack_name, template, { :disable_rollback => true })
+		delete_stack(stack_name)
 	end
 
 	desc "Launch new Ubuntu EC2 instances to run integration tests"
@@ -28,7 +55,9 @@ namespace :integration_test do
 		stack_name = "Ubuntu1204SpotInstance-test-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
 		template = "templates/Ubuntu1204SpotInstance.template"
 
+		puts "[WARNING] This takes about 15 min to run, and will start & stop real EC2 instances"
 		launch_stack(stack_name, template, { :disable_rollback => true })
+		delete_stack(stack_name)
 	end
 end
 
@@ -74,8 +103,6 @@ def launch_stack(stack_name, template, options = {})
 	options[:region_filter] 			||= "eu-west"
 	options[:disable_rollback] 			||= "false"
 
-	puts "[WARNING] This takes about 30 min to run, and will start & stop real EC2 instances"
-
 	puts "Validating template: #{template}"
 	puts exec_python "scripts/validate-template.py #{template}"
 
@@ -92,7 +119,9 @@ EOS
 	puts exec_python cmd
 
 	wait_for_stack(stack_name, options)
+end
 
+def delete_stack(stack_name)
 	puts "Deleting stack #{stack_name}"
 	puts exec_python "scripts/delete-stacks.py #{stack_name} -r eu-west"
 end
