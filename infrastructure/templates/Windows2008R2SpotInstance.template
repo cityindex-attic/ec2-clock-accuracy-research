@@ -180,11 +180,11 @@
                   },
                   "/etc/chef/enable_winrm.cmd" : {
                     "content" : { "Fn::Join" : ["", [
-                      "winrm quickconfig -q\n",
-                      "winrm set winrm/config/winrs @{MaxMemoryPerShellMB=\"300\"}\n",
-                      "winrm set winrm/config @{MaxTimeoutms=\"1800000\"}\n",
-                      "winrm set winrm/config/service @{AllowUnencrypted=\"true\"}\n",
-                      "winrm set winrm/config/service/auth @{Basic=\"true\"}\n"
+                      "call winrm quickconfig -q\n",
+                      "call winrm set winrm/config/winrs @{MaxMemoryPerShellMB=\"300\"}\n",
+                      "call winrm set winrm/config @{MaxTimeoutms=\"1800000\"}\n",
+                      "call winrm set winrm/config/service @{AllowUnencrypted=\"true\"}\n",
+                      "call winrm set winrm/config/service/auth @{Basic=\"true\"}\n"
                     ]]},
                     "encoding": "plain"
                   },
