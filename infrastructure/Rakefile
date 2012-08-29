@@ -48,7 +48,7 @@ end
 desc "Test all cookbooks in cookbooks-overrides/ or cookbooks-sources/"
 task :test_cookbooks => :build_cookbooks do
   puts "Running knife cookbook test for all cookbooks in cookbooks-overrides/ or cookbooks-sources/"
-  pty_exec "knife cookbook test user newrelic"
+  pty_exec "knife cookbook test base "
 end
 
 desc "Runs foodcritic linter"

@@ -20,7 +20,7 @@ cookbook 'user',
 # Custom cookbooks #
 ####################
 
-#cookbook 'apache2-mpm-itk', 	:path => 'cookbooks-sources'
+cookbook 'base', :path => 'cookbooks-sources'
 
 
 ###########

@@ -28,7 +28,14 @@ GIT
   specs:
     user (0.3.0)
 
+PATH
+  remote: cookbooks-sources
+  specs:
+    base (0.0.1)
+      user (>= 0.0.0)
+
 DEPENDENCIES
+  base (>= 0)
   newrelic (>= 0.3.6)
   user (>= 0)
 
