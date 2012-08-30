@@ -13,9 +13,6 @@ cookbook 'sudo', '>= 1.1.0'
 # Community cookbooks with pending pull requests #
 ##################################################
 
-cookbook 'user',
-  :git => 'https://github.com/mrdavidlaing/chef-user',
-  :ref => 'add-group-docs'
 
 ####################
 # Custom cookbooks #
