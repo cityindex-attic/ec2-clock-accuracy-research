@@ -72,8 +72,7 @@ super_admins.each do |super_admin_name|
 	setup_ssh_keys(u, home_dir) unless platform? 'windows'
 
 	# Make user local administrator
-	local_admin_group = "admin"
-	local_admin_group = "Administrators" if platform? 'windows'
+	local_admin_group = if platform? 'windows' then "Administrators" else "admin" end
 
 	group local_admin_group do
 		action :modify
