@@ -4,7 +4,6 @@ require 'json'
 require 'rubygems'
 require 'chef'
 require 'rbconfig'
-require 'pty'
 
 STDOUT.sync = true
 
@@ -128,13 +127,19 @@ def delete_stack(stack_name)
 end
 
 def pty_exec(cmd)
-  PTY.spawn( cmd ) do |stdin, stdout, pid|
-    begin
-      stdin.each { |line| print line }
-    rescue Errno::EIO
-    end
-  end
-rescue PTY::ChildExited
+	is_windows = (RbConfig::CONFIG['host_os'] =~ /mswin|mingw|cygwin/)
+	if is_windows then 
+		puts `#{cmd}`
+  	else
+  	  require 'pty'
+	  PTY.spawn( cmd ) do |stdin, stdout, pid|
+	    begin
+	      stdin.each { |line| print line }
+	    rescue Errno::EIO
+	    end
+	  end
+	end
+rescue 
   puts "#{cmd} - child process exited!"
 end
 
