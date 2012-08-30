@@ -1,3 +1,4 @@
+require 'librarian/chef/integration/knife'
 current_dir = File.dirname(__FILE__)
 
 node_name                "{your workstation name}"
@@ -17,7 +18,7 @@ knife[:aws_ssh_key_id] 	 	  	= "{your_key_name}"
 log_level                :debug
 log_location             STDOUT
 
-cookbook_path            ["#{current_dir}/../cookbooks"]
+cookbook_path            [ Librarian::Chef.install_path, "#{current_dir}/../cookbooks-overrides" ]
 cache_options      		 ({ :path => "#{current_dir}/../tmp/cache/checksums", :skip_expires => true })
 sandbox_path       		  "#{current_dir}/../sandboxes"
 data_bag_path 			  "#{current_dir}/../data_bags"

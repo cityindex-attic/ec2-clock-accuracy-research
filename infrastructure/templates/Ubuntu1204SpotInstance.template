@@ -16,6 +16,10 @@
        "Description" : "S3 bucket containing Chef config files (validation.pem, encrypted_data_bag_secret",
        "Type" : "String"
     },
+    "ChefServer" : {
+       "Description" : "Chef server url (including http[s]:// )",
+       "Type" : "String"
+    },
     "ChefEnvironment" : {
        "Description" : "Chef environment",
        "Type" : "String",
@@ -182,7 +186,7 @@
                       "content" : { "Fn::Join" : ["", [
                         "log_level               :info     \n",
                         "log_location             STDOUT    \n",
-                        "chef_server_url        \"http://chef.labs.cityindex.com\" \n",
+                        "chef_server_url        \"", { "Ref" : "ChefServer" }, "\" \n",
                         "validation_client_name \"chef-validator\" \n",
                         "client_key             \"/etc/chef/client.pem\" \n",
                         "validation_key         \"/etc/chef/validation.pem\" \n"
@@ -195,7 +199,7 @@
                   "/etc/chef/first-boot.json" : {
                       "content" : { "Fn::Join" : ["", [
                         "{                                      \n",
-                        "   \"run_list\": [ \"role[base]\"]     \n",
+                        "   \"run_list\": [ \"recipe[base]\"]   \n",
                         "}                                      \n"
                       ]]},
                       "encoding": "plain",

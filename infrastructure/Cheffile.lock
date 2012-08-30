@@ -1,10 +1,35 @@
-GIT
-  remote: https://github.com/mrdavidlaing/chef-user
-  ref: add-group-docs
-  sha: 404ce8deb43966481da8b3f106d3d8ad10d38801
+SITE
+  remote: http://community.opscode.com/api/v1
   specs:
-    user (0.3.0)
+    apache2 (1.1.12)
+    build-essential (1.1.0)
+    mysql (1.3.0)
+      build-essential (>= 0.0.0)
+      openssl (>= 0.0.0)
+    newrelic (0.3.6)
+      apache2 (>= 0.0.0)
+      php (>= 0.0.0)
+      python (>= 0.0.0)
+    openssl (1.0.0)
+    php (1.0.2)
+      build-essential (>= 0.0.0)
+      mysql (>= 0.0.0)
+      xml (>= 0.0.0)
+    python (1.0.8)
+      build-essential (>= 0.0.0)
+      yum (>= 0.0.0)
+    sudo (1.1.0)
+    xml (1.0.4)
+    yum (0.8.0)
+
+PATH
+  remote: cookbooks-sources
+  specs:
+    base (0.0.19)
+      sudo (>= 0.0.0)
 
 DEPENDENCIES
-  user (>= 0)
+  base (>= 0)
+  newrelic (>= 0.3.6)
+  sudo (>= 1.1.0)
 

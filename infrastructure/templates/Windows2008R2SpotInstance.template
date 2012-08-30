@@ -16,6 +16,10 @@
        "Description" : "S3 bucket containing Chef config files (validation.pem, encrypted_data_bag_secret, client.rb, first-boot.json",
        "Type" : "String"
     },
+    "ChefServer" : {
+       "Description" : "Chef server url (including http[s]:// )",
+       "Type" : "String"
+    },
     "ChefEnvironment" : {
        "Description" : "Chef environment",
        "Type" : "String",
@@ -180,13 +184,38 @@
                   },
                   "/etc/chef/enable_winrm.cmd" : {
                     "content" : { "Fn::Join" : ["", [
-                      "winrm quickconfig -q\n",
-                      "winrm set winrm/config/winrs @{MaxMemoryPerShellMB=\"300\"}\n",
-                      "winrm set winrm/config @{MaxTimeoutms=\"1800000\"}\n",
-                      "winrm set winrm/config/service @{AllowUnencrypted=\"true\"}\n",
-                      "winrm set winrm/config/service/auth @{Basic=\"true\"}\n"
+                      "call winrm quickconfig -q\n",
+                      "call winrm set winrm/config/winrs @{MaxMemoryPerShellMB=\"300\"}\n",
+                      "call winrm set winrm/config @{MaxTimeoutms=\"1800000\"}\n",
+                      "call winrm set winrm/config/service @{AllowUnencrypted=\"true\"}\n",
+                      "call winrm set winrm/config/service/auth @{Basic=\"true\"}\n"
                     ]]},
                     "encoding": "plain"
+                  },
+                  "/etc/chef/client.rb" : {
+                      "content" : { "Fn::Join" : ["", [
+                        "log_level               :info     \n",
+                        "log_location             STDOUT    \n",
+                        "chef_server_url        \"", { "Ref" : "ChefServer" }, "\" \n",
+                        "validation_client_name \"chef-validator\" \n",
+                        "client_key             \"/etc/chef/client.pem\" \n",
+                        "validation_key         \"/etc/chef/validation.pem\" \n"
+                      ]]},
+                      "encoding": "plain",
+                      "mode"  : "000644",
+                      "owner" : "root",
+                      "group" : "root"
+                  },
+                  "/etc/chef/first-boot.json" : {
+                      "content" : { "Fn::Join" : ["", [
+                        "{                                      \n",
+                        "   \"run_list\": [ \"recipe[base]\"]   \n",
+                        "}                                      \n"
+                      ]]},
+                      "encoding": "plain",
+                      "mode"  : "000644",
+                      "owner" : "root",
+                      "group" : "root"
                   },
                   "/etc/chef/chef-client-latest.msi" : {
                       "source": "http://www.opscode.com/chef/install.msi"
@@ -196,12 +225,6 @@
                   },
                   "/etc/chef/encrypted_data_bag_secret" : {
                       "source": { "Fn::Join" : ["", [ "https://s3.amazonaws.com/", { "Ref" : "ChefConfigBucketName" }, "/encrypted_data_bag_secret" ]]}
-                  },
-                  "/etc/chef/client.rb" : {
-                      "source": { "Fn::Join" : ["", [ "https://s3.amazonaws.com/", { "Ref" : "ChefConfigBucketName" }, "/client.rb" ]]}
-                  },
-                  "/etc/chef/first-boot.json" : {
-                      "source": { "Fn::Join" : ["", [ "https://s3.amazonaws.com/", { "Ref" : "ChefConfigBucketName" }, "/first-boot.json" ]]}
                   }
               },
               "commands" : {

@@ -4,16 +4,40 @@ require 'json'
 require 'rubygems'
 require 'chef'
 require 'rbconfig'
-
-# Load common, useful tasks from Chef.
-TOPDIR = File.expand_path(File.join(File.dirname(__FILE__), ".."))
-load 'chef/tasks/chef_repo.rake'
+require 'pty'
 
 STDOUT.sync = true
+
+task :default => [ 'test_cookbooks', 'foodcritic' ]
 
 ###########
 #  Tasks  #
 ###########
+
+namespace :launch_stack do
+	desc "Launch new Windows EC2 instances"
+	task :windows do
+		stack_name = "Windows2008R2SpotInstance-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
+		template = "./templates/Windows2008R2SpotInstance.template"
+
+		launch_stack(stack_name, template, { :disable_rollback => true })
+	end
+
+	desc "Launch new Ubuntu EC2 instances"
+	task :ubuntu do
+		stack_name = "Ubuntu1204SpotInstance-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
+		template = "templates/Ubuntu1204SpotInstance.template"
+
+		launch_stack(stack_name, template, { :disable_rollback => true })
+	end
+
+	desc "Runs chef across all stack instances"
+	task "re_converge" do
+		puts "TODO - automate this.  Requires knife search to work"
+		puts "knife cookbook metadata --all && knife cookbook upload --all"
+		puts "knife winrm 79.125.70.159 \"chef-client -c c:/etc/chef/client.rb -o 'recipe[base]' -l info\" -m -x bootstrapper -P 'BootMeBaby123'"
+	end
+end
 
 namespace :integration_test do
 	desc "Launch new Windows EC2 instances to run integration tests"
@@ -21,7 +45,9 @@ namespace :integration_test do
 		stack_name = "Windows2008R2SpotInstance-test-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
 		template = "./templates/Windows2008R2SpotInstance.template"
 
+		puts "[WARNING] This takes about 30 min to run, and will start & stop real EC2 instances"
 		launch_stack(stack_name, template, { :disable_rollback => true })
+		delete_stack(stack_name)
 	end
 
 	desc "Launch new Ubuntu EC2 instances to run integration tests"
@@ -29,18 +55,40 @@ namespace :integration_test do
 		stack_name = "Ubuntu1204SpotInstance-test-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
 		template = "templates/Ubuntu1204SpotInstance.template"
 
+		puts "[WARNING] This takes about 15 min to run, and will start & stop real EC2 instances"
 		launch_stack(stack_name, template, { :disable_rollback => true })
+		delete_stack(stack_name)
 	end
 end
 
-desc "Initialise / update chef cookbooks as defined in ./Cheffile"
-task :update_chef_repo do
-	puts "Initializing chef repo using ./Cheffile"
-	puts `librarian-chef update` 
-	puts `librarian-chef show` 
+desc "Depreciated -> use build_cookbooks instead"
+task :update_chef_repo => [:build_cookbooks] do
 end
 
-task :default => 'integration_test:ubuntu'
+desc "Copy all chef defined in ./Cheffile into /cookbooks ready for chef run"
+task :build_cookbooks do
+	puts "Building cookbooks using ./Cheffile ...."
+	pty_exec "librarian-chef update" 
+	puts "cookbooks/ contains:"
+	puts "--------------------"
+	pty_exec "librarian-chef show" 
+end
+
+desc "Test all cookbooks in cookbooks-overrides/ or cookbooks-sources/"
+task :test_cookbooks do
+  puts "Running knife cookbook test for all cookbooks in cookbooks-overrides/ or cookbooks-sources/"
+  pty_exec "knife cookbook test base "
+end
+
+desc "Runs foodcritic linter"
+task :foodcritic do
+	puts "Running foodcritic ..."
+  if Gem::Version.new("1.9.2") <= Gem::Version.new(RUBY_VERSION.dup)
+    exec "foodcritic -f any -f ~FC005 cookbooks-sources cookbooks-overrides"
+  else
+    puts "WARN: foodcritic run is skipped as Ruby #{RUBY_VERSION} is < 1.9.2."
+  end
+end
 
 ###########
 # Helpers #
@@ -49,13 +97,12 @@ task :default => 'integration_test:ubuntu'
 def launch_stack(stack_name, template, options = {})
 	options[:timeout] 					||= 1800
 	options[:chef_environment] 			||= "ec2-clock-accuracy-research_test"
+	options[:chef_server] 				||= "http://chef.labs.cityindex.com"
 	options[:key_name] 					||= "labs-commander"
 	options[:notification_topic] 		||= "arn:aws:sns:{REGION}:{ACCOUNT}:as-labs-cityindex-com"
 	options[:chef_config_bucket_name] 	||= "cityindex.labs.chef_bootstrap"
 	options[:region_filter] 			||= "eu-west"
 	options[:disable_rollback] 			||= "false"
-
-	puts "[WARNING] This takes about 30 min to run, and will start & stop real EC2 instances"
 
 	puts "Validating template: #{template}"
 	puts exec_python "scripts/validate-template.py #{template}"
@@ -68,14 +115,27 @@ def launch_stack(stack_name, template, options = {})
 	 	scripts/create-stacks.py #{stack_name} #{template} --enable_iam -r #{options[:region_filter]} #{disable_rollback} 
 		-p KeyName=#{options[:key_name]} -p NotificationTopic=#{options[:notification_topic]} 
 		-p ChefConfigBucketName=#{options[:chef_config_bucket_name]} -p ChefEnvironment=#{options[:chef_environment]} 
-		-p WaitForInstanceTimeoutInSec=#{options[:timeout]} 
+		-p ChefServer=#{options[:chef_server]} -p WaitForInstanceTimeoutInSec=#{options[:timeout]} 
 EOS
 	puts exec_python cmd
 
 	wait_for_stack(stack_name, options)
+end
 
+def delete_stack(stack_name)
 	puts "Deleting stack #{stack_name}"
 	puts exec_python "scripts/delete-stacks.py #{stack_name} -r eu-west"
+end
+
+def pty_exec(cmd)
+  PTY.spawn( cmd ) do |stdin, stdout, pid|
+    begin
+      stdin.each { |line| print line }
+    rescue Errno::EIO
+    end
+  end
+rescue PTY::ChildExited
+  puts "#{cmd} - child process exited!"
 end
 
 def exec_python(cmd) 
