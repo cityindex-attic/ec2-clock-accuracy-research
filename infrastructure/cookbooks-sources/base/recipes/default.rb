@@ -7,10 +7,26 @@
 # Apache v2
 #
 
+# Set home to location in data bag,
+# or a reasonable default (/home/$user).
+def create_home_dir(u)
+    if u['home']
+      home_dir = u['home']
+    else
+      home_dir = "/home/#{u['id']}"
+      home_dir = "/Users/#{u['id']}" if platform? 'windows'
+    end
 
+	directory "#{home_dir}" do
+		owner u['id']
+		group u['gid'] || u['id'] 	unless platform? 'windows'
+		mode "0755" 				unless platform? 'windows'
+	end
+	
+	home_dir
+end
 
 def setup_ssh_keys(u, home_dir)
-
 	if home_dir != "/dev/null"
       directory "#{home_dir}/.ssh" do
         owner u['id']
@@ -51,20 +67,7 @@ super_admins.each do |super_admin_name|
 		action u['action'].to_sym if u['action']
 	end
 
-	# Set home to location in data bag,
-    # or a reasonable default (/home/$user).
-    if u['home']
-      home_dir = u['home']
-    else
-      home_dir = "/home/#{u['id']}"
-      home_dir = "/Users/#{u['id']}" if platform? 'windows'
-    end
-
-	directory "#{home_dir}" do
-		owner u['id']
-		group u['gid'] || u['id'] 	unless platform? 'windows'
-		mode "0755" 				unless platform? 'windows'
-	end
+	home_dir = create_home_dir(u)
 
 	setup_ssh_keys(u, home_dir) unless platform? 'windows'
 
@@ -84,6 +87,6 @@ sudo "group_admin_NOPASSWD" do
   commands ["ALL"] # array of commands, will be .join(",")
   host "ALL"
   nopasswd true # true prepends the runas_spec with NOPASSWD
-  not_if { node['platform'].include? "windows" }
+  not_if platform? 'windows'
 end
 
