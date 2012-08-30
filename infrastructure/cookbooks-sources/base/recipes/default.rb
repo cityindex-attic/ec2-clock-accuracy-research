@@ -9,14 +9,7 @@
 
 
 
-def setup_ssh_keys(u)
-	# Set home to location in data bag,
-    # or a reasonable default (/home/$user).
-    if u['home']
-      home_dir = u['home']
-    else
-      home_dir = "/home/#{u['id']}"
-    end
+def setup_ssh_keys(u, home_dir)
 
 	if home_dir != "/dev/null"
       directory "#{home_dir}/.ssh" do
@@ -53,12 +46,27 @@ super_admins.each do |super_admin_name|
 		uid 		u['uid'] 		if (u['uid'] 	and not platform? 'windows')
 		gid 		u['gid'] 		if (u['gid'] 	and not platform? 'windows')
 		home 		u['home'] 		if (u['home'] 	and not platform? 'windows')
-		home 		u['shell'] 		if (u['shell'] 	and not platform? 'windows')
+		shell 		u['shell'] 		if (u['shell'] 	and not platform? 'windows')
 		
 		action u['action'].to_sym if u['action']
 	end
 
-	setup_ssh_keys(u) unless platform? 'windows'
+	# Set home to location in data bag,
+    # or a reasonable default (/home/$user).
+    if u['home']
+      home_dir = u['home']
+    else
+      home_dir = "/home/#{u['id']}"
+      home_dir = "/Users/#{u['id']}" if platform? 'windows'
+    end
+
+	directory "#{home_dir}" do
+		owner u['id']
+		group u['gid'] || u['id'] 	unless platform? 'windows'
+		mode "0755" 				unless platform? 'windows'
+	end
+
+	setup_ssh_keys(u, home_dir) unless platform? 'windows'
 
 	# Make user local administrator
 	local_admin_group = "admin"
