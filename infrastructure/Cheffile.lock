@@ -11,7 +11,7 @@ SITE
       php (>= 0.0.0)
       python (>= 0.0.0)
     openssl (1.0.0)
-    php (1.0.2)
+    php (1.1.0)
       build-essential (>= 0.0.0)
       mysql (>= 0.0.0)
       xml (>= 0.0.0)
@@ -25,7 +25,7 @@ SITE
 PATH
   remote: cookbooks-sources
   specs:
-    base (0.0.19)
+    base (0.0.22)
       sudo (>= 0.0.0)
 
 DEPENDENCIES
