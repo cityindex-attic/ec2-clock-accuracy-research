@@ -1,0 +1,35 @@
+# NTP Network Time Protocol 
+# **** ATTENTION ****: *You have to restart the NTP service when you change this file to activate the changes* 
+# PLEASE CHECK THIS FILE CAREFULLY AND MODIFY IT IF REQUIRED 
+# please check http://www.ntp.org for additional documentation and background information
+
+# Never use the local clock, and don't panic if it seems way out. 
+# Local clocks on (Amazon EC2) VMs are not to be trusted!
+# See http://www.vmware.com/files/pdf/Timekeeping-In-VirtualMachines.pdf, page 18 for details why.
+tinker panic 0
+restrict 127.0.0.1
+restrict default kod nomodify notrap
+
+# Use drift file 
+driftfile "<%= @ntp_install_dir %>\etc\ntp.drift"
+
+# Use a NTP server from the ntp pool project (see http://www.pool.ntp.org)
+# Please note that you need at least four different servers to be at least protected against
+# one falseticker. If you only rely on internet time, it is highly recommended to add
+# additional servers here. 
+# The 'iburst' keyword speeds up initial synchronization, please check the documentation for more details!
+
+server 0.amazon.pool.ntp.org iburst
+server 1.amazon.pool.ntp.org iburst
+server 2.amazon.pool.ntp.org iburst
+server 3.amazon.pool.ntp.org iburst
+server 0.pool.ntp.org iburst
+server 1.pool.ntp.org iburst
+server 2.pool.ntp.org iburst
+server 3.pool.ntp.org iburst
+
+###########################################################
+enable stats
+statsdir "<%= @ntp_install_dir %>\etc\"
+statistics loopstats peerstats clockstats
+###########################################################

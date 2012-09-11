@@ -19,6 +19,7 @@ cookbook 'sudo', '>= 1.1.0'
 ####################
 
 cookbook 'base', :path => 'cookbooks-sources'
+cookbook 'windows_ntpd', :path => 'cookbooks-sources'
 
 
 ###########

@@ -1,0 +1,25 @@
+[Installer]
+InstallDir=<%= @ntp_install_dir %>
+UpgradeMode=Reinstall
+Logfile=C:\ntp_silent.log
+Silent=Yes
+
+[Components]
+InstallTools=yes
+InstallDocs=no
+InstallOpenSSL=yes
+CreateStartMenuEntries=yes
+
+[Service]
+StartAfterInstallation=yes
+AutoStart=yes
+ServiceAccount=<%= @service_user %>
+CreateAccount=yes
+ServicePassword=<%= @service_password %>
+DisableOthers=yes
+AllowBigInitialTimestep=yes
+EnableMMTimer=yes
+ModifiyFirewall=yes
+
+[Configuration]
+UseConfigFile=<%= @ntp_config_file %>
