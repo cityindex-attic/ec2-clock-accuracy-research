@@ -7,34 +7,6 @@
 # Apache v2
 #
 
-# Set home to location in data bag,
-# or a reasonable default (/home/$user).
-def create_home_dir(username, u)
-    if u['home']
-      home_dir = u['home']
-    else
-      home_dir = "/home/#{u['id']}"
-      home_dir = "/Users/#{u['id']}" if platform? 'windows'
-    end
-
-    if platform? 'windows'
-    	directory "#{home_dir}" do
-			rights :full_control, username
-  			inherits false
-			action :create			
-		end
-    else
-    	directory "#{home_dir}" do
-			owner u['id']
-			group u['gid'] || u['id'] 	
-			mode "0755" 
-			action :create			
-		end
-    end
-
-	home_dir
-end
-
 def setup_ssh_keys(u, home_dir)
 	if home_dir != "/dev/null"
       directory "#{home_dir}/.ssh" do
