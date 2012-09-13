@@ -44,7 +44,7 @@ super_admins.each do |super_admin_name|
 		uid 		u['uid'] 		if (u['uid'] 	and not platform? 'windows')
 		gid 		u['gid'] 		if (u['gid'] 	and not platform? 'windows')
 		supports	:manage_home => true 
-		home 		home
+		home 		home_dir
 		shell 		u['shell'] 		if (u['shell'] 	and not platform? 'windows')
 		
 		action u['action'].to_sym if u['action']
