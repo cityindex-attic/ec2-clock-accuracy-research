@@ -152,7 +152,7 @@
             "config" : {
               "files" : {
                   "/etc/chef/s3.exe" : {
-                    "source": "http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=s3&DownloadId=128447&FileTime=129216634530670000&Build=19280"
+                    "source": "http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=s3&DownloadId=128447&FileTime=129216634530670000&Build=19356"
                   },
                   "/etc/chef/ship_log_files_to_s3.cmd" : {
                     "content" : { "Fn::Join" : ["", [
