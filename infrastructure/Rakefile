@@ -40,7 +40,7 @@ end
 
 namespace :integration_test do
 	desc "Launch new Windows EC2 instances to run integration tests"
-	task :windows do
+	task :windows => "chef_server:upload_cookbooks" do
 		stack_name = "Windows2008R2SpotInstance-test-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
 		template = "./templates/Windows2008R2SpotInstance.template"
 
@@ -50,7 +50,7 @@ namespace :integration_test do
 	end
 
 	desc "Launch new Ubuntu EC2 instances to run integration tests"
-	task :ubuntu do
+	task :ubuntu => "chef_server:upload_cookbooks" do
 		stack_name = "Ubuntu1204SpotInstance-test-#{Time.new.strftime("%Y%m%dT%H%M%S")}"
 		template = "templates/Ubuntu1204SpotInstance.template"
 
@@ -60,8 +60,12 @@ namespace :integration_test do
 	end
 end
 
-desc "Depreciated -> use build_cookbooks instead"
-task :update_chef_repo => [:build_cookbooks] do
+namespace :chef_server do
+	desc "Upload all cookbooks to chef server"
+	task :upload_cookbooks => [:build_cookbooks] do
+		pty_exec "knife cookbook metadata --all "
+		pty_exec "knife cookbook upload --all "
+	end
 end
 
 desc "Copy all chef defined in ./Cheffile into /cookbooks ready for chef run"
