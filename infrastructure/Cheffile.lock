@@ -28,8 +28,7 @@ SITE
 PATH
   remote: cookbooks-sources
   specs:
-    base (0.0.23)
-      ntp (>= 0.0.0)
+    base (0.0.31)
       sudo (>= 0.0.0)
     ntp (1.2.0)
       windows (>= 0.0.0)
