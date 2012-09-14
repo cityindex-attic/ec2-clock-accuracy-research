@@ -9,5 +9,4 @@ supports "ubuntu"
 supports "windows"
 
 depends  "sudo"
-depends  "windows_ntpd"
-	
+depends  "ntp"

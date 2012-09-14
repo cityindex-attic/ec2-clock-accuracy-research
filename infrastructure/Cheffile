@@ -13,13 +13,16 @@ cookbook 'sudo', '>= 1.1.0'
 # Community cookbooks with pending pull requests #
 ##################################################
 
+#cookbook 'ntp',
+#  :git => 'https://github.com/mrdavidlaing/ntp',
+#  :ref => 'feature-windows-ntp'
 
 ####################
 # Custom cookbooks #
 ####################
 
 cookbook 'base', :path => 'cookbooks-sources'
-cookbook 'windows_ntpd', :path => 'cookbooks-sources'
+cookbook 'ntp', :path => 'cookbooks-sources'
 
 
 ###########
