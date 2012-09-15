@@ -151,38 +151,38 @@
         "AWS::CloudFormation::Init" : { 
             "config" : {
               "files" : {
-                  "/etc/chef/s3.exe" : {
+                  "/chef/s3.exe" : {
                     "source": "http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=s3&DownloadId=128447&FileTime=129216634530670000&Build=19356"
                   },
-                  "/etc/chef/ship_log_files_to_s3.cmd" : {
+                  "/chef/ship_log_files_to_s3.cmd" : {
                     "content" : { "Fn::Join" : ["", [
                       "copy /Y c:\\cfn\\log\\cfn-init.log c:\\cfn\\log\\cfn-init.log.txt \n",
-                      "c:\\etc\\chef\\s3.exe auth ",  
+                      "c:\\chef\\s3.exe auth ",  
                         "\"", { "Ref" : "CfnKeys" }, "\" ",
                         "\"", { "Fn::GetAtt": ["CfnKeys", "SecretAccessKey"]}, "\" /nogui \n",
-                      "c:\\etc\\chef\\s3.exe put ", { "Ref" : "ChefConfigBucketName" }, 
+                      "c:\\chef\\s3.exe put ", { "Ref" : "ChefConfigBucketName" }, 
                         "/bootstrap-logs-", { "Ref" : "AWS::Region" }, "/", 
                         { "Ref" : "AWS::StackName" }, "/%COMPUTERNAME%/ c:\\cfn\\log\\*.log.txt /nogui \n"
                     ]]},
                     "encoding": "plain"
                   },
-                  "/etc/chef/run_chef-client.cmd" : {
+                  "/chef/run_chef-client.cmd" : {
                     "content" : { "Fn::Join" : ["", [
                       "SET \"PATH=%PATH%;C:/opscode/chef/bin;C:/opscode/chef/embedded/bin\" \n",
-                      "chef-client -c c:/etc/chef/client.rb -j c:/etc/chef/first-boot.json ",
+                      "chef-client -c c:/chef/client.rb -j c:/chef/first-boot.json ",
                           " --environment ", { "Ref" : "ChefEnvironment" }, 
                           " --logfile c:/cfn/log/chef-init.log.txt \n"
                     ]]},
                     "encoding": "plain"
                   },
-                  "/etc/chef/add_bootstrap_user.cmd" : {
+                  "/chef/add_bootstrap_user.cmd" : {
                     "content" : { "Fn::Join" : ["", [
                       "net user bootstrapper BootMeBaby123 /add\n",
                       "net localgroup administrators bootstrapper /add\n"
                     ]]},
                     "encoding": "plain"
                   },
-                  "/etc/chef/enable_winrm.cmd" : {
+                  "/chef/enable_winrm.cmd" : {
                     "content" : { "Fn::Join" : ["", [
                       "call winrm quickconfig -q\n",
                       "call winrm set winrm/config/winrs @{MaxMemoryPerShellMB=\"300\"}\n",
@@ -192,21 +192,21 @@
                     ]]},
                     "encoding": "plain"
                   },
-                  "/etc/chef/client.rb" : {
+                  "/chef/client.rb" : {
                       "content" : { "Fn::Join" : ["", [
                         "log_level               :info     \n",
                         "log_location             STDOUT    \n",
                         "chef_server_url        \"", { "Ref" : "ChefServer" }, "\" \n",
                         "validation_client_name \"chef-validator\" \n",
-                        "client_key             \"/etc/chef/client.pem\" \n",
-                        "validation_key         \"/etc/chef/validation.pem\" \n"
+                        "client_key             \"/chef/client.pem\" \n",
+                        "validation_key         \"/chef/validation.pem\" \n"
                       ]]},
                       "encoding": "plain",
                       "mode"  : "000644",
                       "owner" : "root",
                       "group" : "root"
                   },
-                  "/etc/chef/first-boot.json" : {
+                  "/chef/first-boot.json" : {
                       "content" : { "Fn::Join" : ["", [
                         "{                                      \n",
                         "   \"run_list\": [ \"recipe[base]\"]   \n",
@@ -217,28 +217,28 @@
                       "owner" : "root",
                       "group" : "root"
                   },
-                  "/etc/chef/chef-client-latest.msi" : {
+                  "/chef/chef-client-latest.msi" : {
                       "source": "http://www.opscode.com/chef/install.msi"
                   },
-                  "/etc/chef/validation.pem" : {
+                  "/chef/validation.pem" : {
                       "source": { "Fn::Join" : ["", [ "https://s3.amazonaws.com/", { "Ref" : "ChefConfigBucketName" }, "/validation.pem" ]]}
                   },
-                  "/etc/chef/encrypted_data_bag_secret" : {
+                  "/chef/encrypted_data_bag_secret" : {
                       "source": { "Fn::Join" : ["", [ "https://s3.amazonaws.com/", { "Ref" : "ChefConfigBucketName" }, "/encrypted_data_bag_secret" ]]}
                   }
               },
               "commands" : {
                 "1-users" : {
-                  "command" : "C:\\etc\\chef\\add_bootstrap_user.cmd"
+                  "command" : "c:\\chef\\add_bootstrap_user.cmd"
                 },
                 "2-winrm" : {
-                  "command" : "C:\\etc\\chef\\enable_winrm.cmd"
+                  "command" : "c:\\chef\\enable_winrm.cmd"
                 },
                 "3-install-chef" : {
-                  "command" : "msiexec /qb /i c:\\etc\\chef\\chef-client-latest.msi"
+                  "command" : "msiexec /qb /i c:\\chef\\chef-client-latest.msi"
                 },
                 "4-run-chef-client" : {
-                  "command" : "C:\\etc\\chef\\run_chef-client.cmd"
+                  "command" : "c:\\chef\\run_chef-client.cmd"
                 }
               }
             }
@@ -260,14 +260,13 @@
         "KeyName": {  "Ref": "KeyName"  },
         "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
             "<script>\n",
-            "mkdir C:\\etc \n",
-            "mkdir C:\\etc\\chef \n",
+            "mkdir c:\\chef \n",
             "cfn-init -v -s ", { "Ref" : "AWS::StackName" }, " -r LaunchConfig ",
                 "    --access-key ",  { "Ref" : "CfnKeys" },
                 "    --secret-key ", {"Fn::GetAtt": ["CfnKeys", "SecretAccessKey"]},
                 "    --region ", { "Ref" : "AWS::Region" }, "\n",
             "cfn-signal.exe -e %ERRORLEVEL% ", { "Fn::Base64" : { "Ref" : "ChefBootstrapWaitHandle" }}, "\n",
-            "c:\\etc\\chef\\ship_log_files_to_s3.cmd \n",
+            "c:\\chef\\ship_log_files_to_s3.cmd \n",
             "</script>"
           ]]}}
       }
