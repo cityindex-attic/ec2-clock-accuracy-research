@@ -42,15 +42,14 @@ log.info(args.resource_ids)
 
 print heading + ":"
 for region in regions:
-    pprint(region.name, indent=2)
     try:
         ec2 = boto.connect_ec2(region=region, **credentials)
-        print 'Describing snapshots'
         resources = ec2.get_all_snapshots(snapshot_ids=args.resource_ids, owner='self', filters=filters)
+        print region.name + ": " + str(len(resources)) + " snapshots"
         for resource in resources:
             if args.verbose:
                 pprint(vars(resource))
             else:
-                pprint(resource)
+                print resource.id
     except boto.exception.BotoServerError, e:
         log.error(e.error_message)
