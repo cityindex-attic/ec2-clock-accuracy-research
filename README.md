@@ -19,7 +19,7 @@ Currently available are respective infrastructure automation scripts to operate 
 of differing sizes and OS, see the following links for further details:
 
 * [Infrastructure setup instructions](https://github.com/cityindex/ec2-clock-accuracy-research/tree/master/infrastructure#infrastructure-setup-instructions)
-* [Scripts for operating cross region AWS resources](https://github.com/cityindex/ec2-clock-accuracy-research/tree/master/infrastructure/scripts#scripts-for-operating-cross-region-research-resources)
+* [Botocross - A (dedicated) Python package for operating cross region AWS resources](https://github.com/sopel/botocross)
 
 ## Challenges
 
