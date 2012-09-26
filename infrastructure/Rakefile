@@ -108,14 +108,14 @@ def launch_stack(stack_name, template, options = {})
 	options[:disable_rollback] 			||= "false"
 
 	puts "Validating template: #{template}"
-	puts exec_python "scripts/validate-template.py #{template}"
+	puts exec_python "validate-template.py #{template}"
 
 	disable_rollback = ""
 	disable_rollback = "--disable_rollback" if options[:disable_rollback] 
 
 	puts "Launching Ubuntu cloud stack in eu-west-1 region named #{stack_name}"
 	cmd = <<EOS.gsub(/\s+/, " ").strip
-	 	scripts/create-stacks.py #{stack_name} #{template} --enable_iam -r #{options[:region_filter]} #{disable_rollback} 
+	 	create-stacks.py #{stack_name} #{template} --enable_iam -r #{options[:region_filter]} #{disable_rollback} 
 		-p KeyName=#{options[:key_name]} -p NotificationTopic=#{options[:notification_topic]} 
 		-p ChefConfigBucketName=#{options[:chef_config_bucket_name]} -p ChefEnvironment=#{options[:chef_environment]} 
 		-p ChefServer=#{options[:chef_server]} -p WaitForInstanceTimeoutInSec=#{options[:timeout]} 
@@ -127,7 +127,7 @@ end
 
 def delete_stack(stack_name)
 	puts "Deleting stack #{stack_name}"
-	puts exec_python "scripts/delete-stacks.py #{stack_name} -r eu-west"
+	puts exec_python "delete-stacks.py #{stack_name} -r eu-west"
 end
 
 def pty_exec(cmd)
@@ -152,7 +152,7 @@ def exec_python(cmd)
 	if is_windows then 
 		cmd = "python #{cmd}" 
 	else 
-		cmd = "./#{cmd}"
+		cmd = "#{cmd}"
 	end
 	out = `#{cmd}`
 	fail(out) if $?.to_i != 0
@@ -170,7 +170,7 @@ def wait_for_stack(stack_name, options = {})
 		while stack_status == "CREATE_IN_PROGRESS"
 			print "."; sleep 15; print "."; sleep 15; print "."; sleep 15; print "."; sleep 15 # 4 . over 60 sec
 
-			result = exec_python "scripts/describe-stacks.py -r eu-west-1 -s #{stack_name} --xml"
+			result = exec_python "describe-stacks.py -r eu-west-1 -s #{stack_name} --xml"
 			stacks =  Nokogiri::XML(result)
 			stack_status = stacks.xpath('//StackStatus').text
 		end
@@ -178,7 +178,7 @@ def wait_for_stack(stack_name, options = {})
 		puts "\n=========================================="
 		puts "                 Logs"
 		puts "=========================================="
-		puts exec_python "scripts/read-buckets.py --prefix bootstrap-logs-eu-west-1/#{stack_name} #{options[:chef_config_bucket_name]}"
+		puts exec_python "read-buckets.py --prefix bootstrap-logs-eu-west-1/#{stack_name} #{options[:chef_config_bucket_name]}"
 	rescue
 		puts result
 	ensure

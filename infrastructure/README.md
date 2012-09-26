@@ -17,7 +17,7 @@ The collection of Python, Ruby and Chef scripts contained in this folder automat
 1.  Ensure Ruby 1.9.3+ is installed - ```ruby --version``` ([Instructions on how to switch from ruby 1.8 to 1.9.3p0?](http://lenni.info/blog/2012/05/installing-ruby-1-9-3-on-ubuntu-12-04-precise-pengolin/))
 1.  Install Ruby gems: ```sudo gem install chef rake knife-ec2 knife-windows librarian nokogiri --no-ri --no-rdoc```
 1.  Ensure Python 2.7.3 is installed ```sudo apt-get install python python-pip```
-1.  Install Python packages ```sudo pip install boto argparse```
+1.  Install Python packages ```sudo pip install git+git://github.com/sopel/botocross.git```
 1.  Configure your AWS credentials:
     1. Add the following to your ```~/.bashrc```
        ```
@@ -47,7 +47,7 @@ The collection of Python, Ruby and Chef scripts contained in this folder automat
 1.  Ensure Python PIP is installed ( http://pypi.python.org/pypi/setuptools#windows )
 	1.  Download and install setuptools
 	1.  Then run: ```easy_install.exe pip```
-1.  Install Python packages ```pip install boto boto argparse```
+1.  Install Python packages ```pip install git+git://github.com/sopel/botocross.git```
 1.  Configure your AWS credentials:
     1. Add the following to your environment
        ```
