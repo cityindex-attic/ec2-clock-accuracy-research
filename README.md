@@ -4,7 +4,7 @@ Reproducible research on clock accuracy on different Amazon EC2 instance sizes /
 
 ## Status
 
-![Lifecycle: retired](https://img.shields.io/badge/lifecycle-retired-blue.svg) ![Maturity: alpha](https://img.shields.io/badge/maturity-alpha-lightgrey.svg) ![Support: unsupported](https://img.shields.io/badge/support-unsupported-yellow.svg)
+![Lifecycle: retired](https://img.shields.io/badge/lifecycle-retired-blue.svg) ![Maturity: development](https://img.shields.io/badge/maturity-development-lightgrey.svg) ![Support: unsupported](https://img.shields.io/badge/support-unsupported-yellow.svg)
 
 This project has been retired and is no longer being supported by City Index Ltd.
 
